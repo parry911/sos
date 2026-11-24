@@ -94,8 +94,8 @@ if (fam === "accessoryCircular") {
   text(w, kept + " kept" + (next ? " · " + next[1] + " in " + fmtLeft(left) : ""), Font.systemFont(12), Color.white(), 1);
   text(w, motto, Font.italicSystemFont(12), Color.white(), 1);
 } else {
-  const bg = await painting(fam === "small" ? "bg-small.jpg" : "bg-medium.jpg");
-  if (bg) w.backgroundImage = bg; else w.backgroundColor = new Color("#4a4236");
+  const bg = await painting(fam === "small" ? "bg-night-small.jpg" : "bg-night-medium.jpg");
+  if (bg) w.backgroundImage = bg; else w.backgroundColor = new Color("#0c1124");
   if (fam === "small") {
     w.setPadding(12, 12, 10, 12);
     const top = w.addStack(); top.addSpacer();
@@ -110,10 +110,11 @@ if (fam === "accessoryCircular") {
     row.addImage(ring(120, pct, 10, C.cream, C.track, String(days), dayWord, C.cream, C.soft, C.shade)).imageSize = new Size(120, 120);
     row.addSpacer(16);
     const col = row.addStack(); col.layoutVertically();
-    text(col, motto, serif("Georgia-Italic", 13), C.soft, 1, true);
+    text(col, "Junk-free", serif("Georgia-Italic", 12), C.soft, 1, true);
+    col.addSpacer(2);
+    text(col, motto, serif("Georgia-Bold", 19), C.cream, 3, true);
     col.addSpacer(6);
-    text(col, next ? "Next: " + next[1] + " · in " + fmtLeft(left) : "Every milestone unlocked", serif("Georgia", 12), C.soft, 1, true);
-    text(col, next ? next[2] : "One year free", serif("Georgia-Bold", 18), C.cream, 2, true);
+    text(col, next ? next[1] + " unlocks in " + fmtLeft(left) : "Every milestone unlocked", serif("Georgia-Italic", 12), C.soft, 1, true);
     col.addSpacer();
     text(col, kept + " kept · " + clean, serif("Georgia-Bold", 13), C.amber, 1, true);
     row.addSpacer();

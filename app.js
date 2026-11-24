@@ -29,6 +29,11 @@ const wavesWon = () => S.urges.filter(u => u.outcome === 'won' || u.outcome === 
 const lastSlip = () => S.slips.length ? S.slips.reduce((a, b) => new Date(a.at) > new Date(b.at) ? a : b) : null;
 const daysSinceInstall = () => Math.floor((new Date(dkey(new Date())) - new Date(dkey(S.installed))) / DAY);
 if (S.celebrated < 0) { S.celebrated = reachedCount() - 1; save(); }
+if (!S.weights) { S.weights = [{d:'2026-11-25', kg:93.25}]; save(); }
+if (!S.food) { S.food = {}; save(); }
+if (!S.prof) { S.prof = {h:184, age:null, act:1.375, def:500}; save(); }
+const curWeight = () => S.weights.length ? S.weights[S.weights.length-1].kg : 93.25;
+const fill = s => String(s).replace('{liver}', (curWeight()*0.03).toFixed(1) + ' to ' + (curWeight()*0.05).toFixed(1) + ' kg');
 
 /* ---------- video storage (stays on this phone) ---------- */
 const idb = () => new Promise((res, rej) => { const r = indexedDB.open('sos', 1); r.onupgradeneeded = () => r.result.createObjectStore('files'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
@@ -100,7 +105,7 @@ function organState(id) {
 }
 function bodySVG() {
   const c = id => 's-' + organState(id);
-  return `<svg viewBox="0 0 390 470" aria-hidden="true">
+  return `<svg viewBox="0 0 390 420" aria-hidden="true">
   <defs><radialGradient id="glow" cx="50%" cy="42%" r="60%"><stop offset="0" stop-color="#7ef0b5" stop-opacity=".2"/><stop offset="1" stop-color="#7ef0b5" stop-opacity="0"/></radialGradient>
   <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f3a2f"/><stop offset="1" stop-color="#13251e"/></linearGradient></defs>
   <ellipse cx="195" cy="215" rx="175" ry="215" fill="url(#glow)"/>
@@ -117,6 +122,7 @@ function bodySVG() {
   <path d="M212 190 q26 -6 32 14 q2 18 -22 20 q-14 0 -14 -14z" class="org ${c('appetite')}"/>
   <path d="M168 242 q27 -9 54 0 q10 14 0 30 q-27 10 -54 0 q-10 -16 0 -30z M178 252 q17 -5 34 0 M178 262 q17 5 34 0" fill="none" stroke-width="4" stroke-linecap="round" class="org line ${c('gut')}"/>
   <circle cx="182" cy="306" r="7" class="org ${c('hormones')}"/><circle cx="208" cy="306" r="7" class="org ${c('hormones')}"/>
+  <defs><linearGradient id="fadeb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a100d" stop-opacity="0"/><stop offset="1" stop-color="#0a100d"/></linearGradient></defs><rect x="0" y="350" width="390" height="70" fill="url(#fadeb)"/>
   </svg>`;
 }
 function renderBodyMap() {
@@ -136,7 +142,7 @@ function mileSheet(i) {
   const status = st === 'on' ? 'Unlocked' : st === 'next' ? 'Unlocks in ' + dur(m.h*HR - streakMs()) : 'Locked until ' + m.tag;
   sheet(`<div class="mute" style="font-weight:700;color:${st==='on'?'var(--mint)':st==='next'?'var(--coral)':'var(--mute)'}">${m.tag} · ${status}</div>
     <div class="q" style="margin-top:4px">${m.title}</div>
-    <p style="color:#dfeee6;font-size:16px;${st==='off'?'filter:blur(5px);user-select:none':''}">${m.body}</p>
+    <p style="color:#dfeee6;font-size:16px;${st==='off'?'filter:blur(5px);user-select:none':''}">${fill(m.body)}</p>
     <p style="font-size:13px">${m.src}</p><button class="btn dim full" id="shClose">Close</button>`, () => { $('#shClose').onclick = closeSheet; });
 }
 function allMilesSheet() {
@@ -144,7 +150,7 @@ function allMilesSheet() {
   sheet('<div class="q">Every milestone</div><div class="mlist">' + D.MILES.map((m, i) => {
     const st = i < r ? 'on' : i === r ? 'next' : 'off';
     const when = st === 'on' ? 'Unlocked' : st === 'next' ? 'in ' + dur(m.h*HR - ms) : 'Locked';
-    return `<div class="mrow ${st}"><i></i><div><b>${m.tag} · ${m.title}</b><span>${when} · ${m.src}</span><p>${m.body}</p></div></div>`;
+    return `<div class="mrow ${st}"><i></i><div><b>${m.tag} · ${m.title}</b><span>${when} · ${m.src}</span><p>${fill(m.body)}</p></div></div>`;
   }).join('') + '</div><button class="btn dim full" id="shClose">Close</button>', () => { $('#shClose').onclick = closeSheet; });
 }
 $('#openMiles').onclick = allMilesSheet;
@@ -163,10 +169,12 @@ function renderStoryRow() {
   const locked = D.DECKS.filter(d => n < d.unlock).slice(0, 1);
   $('#storyRow').innerHTML = decks.map(d => `<button class="st" data-deck="${d.id}"><span class="ring ${isSeen(d)?'seen':''}"><span class="bub" style="${bubStyle(d)}">${d.video?'':d.glyph}</span></span><small>${d.label}</small></button>`).join('') +
     locked.map(d => `<div class="st locked"><span class="ring lock"><span class="bub" style="background:#13251e;color:#8fb3a2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span></span><small>Tomorrow</small></div>`).join('') +
-    (videoURL ? '' : `<button class="st" id="addVid"><span class="ring seen"><span class="bub" style="background:#13251e;font-size:26px">+</span></span><small>Add video</small></button>`);
+    (videoURL ? '' : `<button class="st" id="addVid"><span class="ring seen"><span class="bub" style="background:#13251e;font-size:26px">+</span></span><small>Add video</small></button>`) +
+    `<button class="allst" id="allStories">See all</button>`;
 }
 $('#storyRow').addEventListener('click', e => {
   if (e.target.closest('#addVid')) { switchTab('you'); return; }
+  if (e.target.closest('#allStories')) { switchTab('stories'); return; }
   const b = e.target.closest('[data-deck]'); if (!b) return;
   const decks = availableDecks().sort((a, b) => (isSeen(a) - isSeen(b)) || (a.video ? -1 : 0));
   openStories(decks, decks.findIndex(d => d.id === b.dataset.deck));
@@ -187,33 +195,43 @@ $('#storyList').addEventListener('click', e => {
   openStories(decks, decks.findIndex(d => d.id === b.dataset.deck));
 });
 
-const SV = {decks:[], di:0, fi:0, t0:0, el:0, paused:true, raf:0, dur:7000, hold:0, holding:false};
+const SV = {decks:[], di:0, fi:0, t0:0, el:0, paused:true, raf:0, dur:7500, hold:0, holding:false, quiz:false, ctrl:null};
 const stv = $('#stvid');
+const SPK_ON = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg>';
+const SPK_OFF = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>';
+if (S.sound === undefined) S.sound = true;
+FX.setEnabled(S.sound);
+function setSound(v) { S.sound = v; save(); FX.setEnabled(v); $$('.sndbtn').forEach(b => { b.innerHTML = (v ? SPK_ON : SPK_OFF) + (b.dataset.lab ? '<span>' + (v ? 'Sound' : 'Muted') + '</span>' : ''); b.setAttribute('aria-label', v ? 'Mute' : 'Turn sound on'); }); }
 function openStories(decks, di) {
   if (di < 0) return;
+  FX.ctx();
   SV.decks = decks; SV.di = di; SV.fi = 0;
   $('#story').classList.remove('hide');
+  setSound(S.sound);
   renderFrame();
 }
-function closeStories() { cancelAnimationFrame(SV.raf); stv.pause(); stv.classList.add('hide'); $('#story').classList.add('hide'); renderAll(); }
+function closeStories() { cancelAnimationFrame(SV.raf); if (SV.ctrl) SV.ctrl.stop(); FX.stop(); FX.quiet(); stv.pause(); stv.classList.add('hide'); $('#story').classList.add('hide'); renderAll(); }
 function renderFrame() {
   const d = SV.decks[SV.di];
   if (d.video) S.seen.you = dkey(new Date()); else S.seen[d.id] = true;
   save();
+  if (SV.ctrl) { SV.ctrl.stop(); SV.ctrl = null; }
   $('#segs').innerHTML = d.frames.map((_, i) => `<div><i style="width:${i < SV.fi ? 100 : 0}%"></i></div>`).join('');
   $('#sBub').setAttribute('style', bubStyle(d)); $('#sBub').textContent = d.video ? '' : d.glyph;
   $('#sName').textContent = d.label;
   $('#sMeta').textContent = d.video ? 'Your message' : d.week ? 'Your week' : 'True story · ' + (SV.fi+1) + ' of ' + d.frames.length;
-  $('#story').style.background = d.video ? '#000' : `linear-gradient(180deg, ${d.color} 0%, #070505 78%)`;
+  SV.quiz = false;
   if (d.video) {
-    $('#sBody').classList.add('hide'); stv.classList.remove('hide');
+    FX.stop(); FX.quiet();
+    $('#sScene').classList.add('hide'); stv.classList.remove('hide');
     stv.src = videoURL; stv.muted = false; stv.currentTime = 0;
     stv.play().catch(() => { $('#sMeta').textContent = 'Tap to play'; });
   } else {
-    stv.pause(); stv.classList.add('hide'); $('#sBody').classList.remove('hide');
-    const f = d.frames[SV.fi];
-    $('#sArt').innerHTML = d.art && ART[d.art] ? ART[d.art]() : '';
-    $('#sBig').textContent = f.big; $('#sText').textContent = f.body || ''; $('#sSrc').textContent = f.src || '';
+    stv.pause(); stv.classList.add('hide'); $('#sScene').classList.remove('hide');
+    const f = Object.assign({}, d.frames[SV.fi]); f.body = fill(f.body || ''); f.big = fill(f.big || ''); f.color = d.color;
+    if (f.fx === 'quiz') SV.quiz = true;
+    FX.play(d.mood || 'tense');
+    SV.ctrl = FX.scene($('#sScene'), f, {onQuiz: () => { SV.quiz = false; SV.el = Math.max(0, SV.dur - 4500); SV.t0 = performance.now(); }});
   }
   SV.el = 0; SV.t0 = performance.now(); SV.paused = false;
   cancelAnimationFrame(SV.raf); SV.raf = requestAnimationFrame(loop);
@@ -222,6 +240,7 @@ function loop(now) {
   const d = SV.decks[SV.di]; if (!d) return;
   let p;
   if (d.video) p = stv.duration ? stv.currentTime / stv.duration : 0;
+  else if (SV.quiz) { p = 0; SV.t0 = now; }
   else p = (SV.el + (SV.paused ? 0 : now - SV.t0)) / SV.dur;
   const seg = $('#segs').children[SV.fi]; if (seg) seg.firstChild.style.width = Math.min(100, p*100) + '%';
   if (p >= 1 || (d.video && stv.ended)) { nextFrame(); return; }
@@ -229,43 +248,67 @@ function loop(now) {
 }
 function nextFrame() { const d = SV.decks[SV.di]; if (SV.fi < d.frames.length-1) SV.fi++; else if (SV.di < SV.decks.length-1) { SV.di++; SV.fi = 0; } else { closeStories(); return; } renderFrame(); }
 function prevFrame() { if (SV.fi > 0) SV.fi--; else if (SV.di > 0) { SV.di--; SV.fi = 0; } renderFrame(); }
-function pauseStory() { if (SV.paused) return; SV.paused = true; SV.el += performance.now() - SV.t0; stv.pause(); }
-function resumeStory() { if (!SV.paused) return; SV.t0 = performance.now(); SV.paused = false; const d = SV.decks[SV.di]; if (d && d.video) stv.play().catch(() => {}); }
-$('#story').addEventListener('pointerdown', e => { if (e.target.closest('#stClose')) return; SV.holding = false; SV.hold = setTimeout(() => { SV.holding = true; pauseStory(); }, 220); });
+function pauseStory() { if (SV.paused) return; SV.paused = true; SV.el += performance.now() - SV.t0; stv.pause(); FX.suspend(true); }
+function resumeStory() { if (!SV.paused) return; SV.t0 = performance.now(); SV.paused = false; FX.suspend(false); const d = SV.decks[SV.di]; if (d && d.video) stv.play().catch(() => {}); }
+$('#story').addEventListener('pointerdown', e => { if (e.target.closest('#stClose,.sndbtn,.quiz')) return; SV.holding = false; SV.hold = setTimeout(() => { SV.holding = true; pauseStory(); }, 220); });
 $('#story').addEventListener('pointerup', e => {
-  if (e.target.closest('#stClose')) return;
+  if (e.target.closest('#stClose,.sndbtn,.quiz')) return;
   clearTimeout(SV.hold);
   if (SV.holding) { resumeStory(); return; }
   if (e.clientX < window.innerWidth*0.3) prevFrame(); else nextFrame();
 });
 $('#stClose').onclick = closeStories;
+$('#stSnd').onclick = () => { setSound(!S.sound); if (S.sound) { const d = SV.decks[SV.di]; if (d && !d.video) FX.play(d.mood || 'tense'); } };
 
 /* ---------- reels ---------- */
-const RBG = ['#3a0d0a','#10263a','#3b2410','#1a1a3a','#3a1020','#173a2b','#3a2a10'];
+const RBG = ['#3a0d0a','#10263a','#3b2410','#1a1a3a','#3a1020','#173a2b','#3a2a10','#2a1030'];
 let reelMode = 'all';
+const pinSVG = on => `<svg width="30" height="30" viewBox="0 0 24 24" fill="${on?'#ff6b57':'none'}" stroke="${on?'#ff6b57':'#fff'}" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg>`;
+function reelColor(r, i) { return r.me ? '#5a0f16' : RBG[i % RBG.length]; }
 function reelHTML(r, i) {
   const pinned = S.pinned.includes(r.id);
-  const col = r.me ? '#5a0f16' : RBG[i % RBG.length];
-  return `<article class="reel ${r.me?'me':''}" data-id="${r.id}"><div class="bg" style="background:radial-gradient(120% 70% at 30% 20%, ${col} 0%, #060404 75%)"></div>
-  <span class="tagl">${r.me ? 'From your own orders' : 'Statutory warning'}</span><h3>${r.big}</h3><p>${r.body}</p><small>${r.src}</small>
-  <div class="ract"><button data-pin="${r.id}" aria-label="${pinned?'Unpin':'Pin'}"><svg width="30" height="30" viewBox="0 0 24 24" fill="${pinned?'#ff6b57':'none'}" stroke="${pinned?'#ff6b57':'#fff'}" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg>${pinned?'Pinned':'Pin'}</button></div></article>`;
+  return `<article class="reel ${r.me?'me':''}" data-id="${r.id}" data-i="${i}"><div class="rscene"></div>
+  <div class="ract"><button data-pin="${r.id}" aria-label="${pinned?'Unpin':'Pin'}">${pinSVG(pinned)}${pinned?'Pinned':'Pin'}</button><button class="sndbtn" data-lab="1" aria-label="Sound">${S.sound ? SPK_ON : SPK_OFF}<span>${S.sound ? 'Sound' : 'Muted'}</span></button></div>
+  <div class="rprog"><i></i></div></article>`;
+}
+let reelIO = null, activeReel = null, reelCtrl = null, reelList = [];
+function startReel(el, list, opts = {}) {
+  if (activeReel === el) return;
+  stopReel();
+  activeReel = el;
+  const r = list.find(x => x.id === el.dataset.id); if (!r) return;
+  const sc = Object.assign({}, r, {color: reelColor(r, +el.dataset.i)});
+  reelCtrl = FX.scene(el.querySelector('.rscene'), sc, {reel:true, tag: r.me ? 'From your own orders' : r.good ? 'Good news' : 'Statutory warning', voice: !opts.silent});
+  if (!opts.silent) FX.play(r.mood || 'tense');
+  const bar = el.querySelector('.rprog i'); if (bar) { bar.style.animation = 'none'; void bar.offsetWidth; bar.style.animation = ''; }
+}
+function stopReel() { if (reelCtrl) reelCtrl.stop(); reelCtrl = null; activeReel = null; FX.quiet(); }
+function observeReels(root, list, opts) {
+  if (reelIO) reelIO.disconnect();
+  reelList = list;
+  reelIO = new IntersectionObserver(es => { es.forEach(en => { if (en.isIntersecting && en.intersectionRatio > 0.6) startReel(en.target, list, opts); }); }, {root, threshold:[0.6]});
+  root.querySelectorAll('.reel').forEach(el => reelIO.observe(el));
 }
 function renderReels() {
   const list = reelMode === 'pin' ? D.REELS.filter(r => S.pinned.includes(r.id)) : reelOrder;
+  stopReel();
   $('#feed').innerHTML = list.length ? list.map(reelHTML).join('') : '<div class="empty"><div><b style="color:#fff;font-size:18px">Nothing pinned yet</b><br>Double-tap a reel that hits hard. Pinned reels show first during an SOS.</div></div>';
+  if (list.length) observeReels($('#feed'), list, {});
 }
 let reelOrder = shuffle(D.REELS);
 function togglePin(id, reel) {
   const i = S.pinned.indexOf(id);
   if (i >= 0) S.pinned.splice(i, 1); else S.pinned.unshift(id);
   save();
-  if (reel) { const b = reel.querySelector('[data-pin]'); const r = D.REELS.find(x => x.id === id); const tmp = document.createElement('div'); tmp.innerHTML = reelHTML(r, 0); b.replaceWith(tmp.querySelector('[data-pin]')); }
+  if (reel) { const b = reel.querySelector('[data-pin]'); const on = S.pinned.includes(id); b.innerHTML = pinSVG(on) + (on ? 'Pinned' : 'Pin'); b.setAttribute('aria-label', on ? 'Unpin' : 'Pin'); }
 }
 let lastTap = {t:0, id:null};
-$('#feed').addEventListener('click', e => {
+function reelClick(e, container) {
   const pb = e.target.closest('[data-pin]'); const reel = e.target.closest('.reel');
+  if (e.target.closest('.sndbtn')) { FX.ctx(); setSound(!S.sound); if (S.sound && activeReel) { const r = reelList.find(x => x.id === activeReel.dataset.id); FX.play((r && r.mood) || 'tense'); } return; }
   if (pb) { togglePin(pb.dataset.pin, reel); return; }
-  if (!reel) return;
+  if (!reel || e.target.closest('.quiz')) return;
+  FX.ctx();
   const now = Date.now();
   if (lastTap.id === reel.dataset.id && now - lastTap.t < 320) {
     if (!S.pinned.includes(reel.dataset.id)) togglePin(reel.dataset.id, reel);
@@ -274,7 +317,8 @@ $('#feed').addEventListener('click', e => {
     reel.appendChild(p); setTimeout(() => p.remove(), 900);
     lastTap = {t:0, id:null};
   } else lastTap = {t:now, id:reel.dataset.id};
-});
+}
+$('#feed').addEventListener('click', e => reelClick(e, $('#feed')));
 $('#rAll').onclick = () => { reelMode = 'all'; $('#rAll').classList.add('on'); $('#rPin').classList.remove('on'); renderReels(); $('#feed').scrollTop = 0; };
 $('#rPin').onclick = () => { reelMode = 'pin'; $('#rPin').classList.add('on'); $('#rAll').classList.remove('on'); renderReels(); $('#feed').scrollTop = 0; };
 
@@ -369,7 +413,7 @@ function openSOS() {
     sv.play().catch(() => { $('#vHint').textContent = 'Tap the video to play.'; });
   } else step('want');
 }
-function closeSOS() { sv.pause(); clearInterval(waveT); $('#sos').classList.add('hide'); renderAll(); }
+function closeSOS() { sv.pause(); clearInterval(waveT); stopReel(); if (reelIO) reelIO.disconnect(); if ($('#reels').classList.contains('on')) setTimeout(renderReels, 50); $('#sos').classList.add('hide'); renderAll(); }
 sv.addEventListener('timeupdate', () => {
   if (sv.duration) $('#sProg').style.width = (sv.currentTime / sv.duration * 100) + '%';
   const left = Math.ceil(30 - sv.currentTime);
@@ -399,7 +443,7 @@ $('#rate').addEventListener('click', e => {
 function startWave() {
   sos.t0 = Date.now(); sos.last = Date.now();
   const pinned = D.REELS.filter(r => S.pinned.includes(r.id)), rest = shuffle(D.REELS.filter(r => !S.pinned.includes(r.id)));
-  $('#miniFeed').innerHTML = pinned.concat(rest).map(reelHTML).join(''); $('#miniFeed').scrollTop = 0;
+  const ml = pinned.concat(rest); $('#miniFeed').innerHTML = ml.map(reelHTML).join(''); $('#miniFeed').scrollTop = 0; FX.stop(); requestAnimationFrame(() => observeReels($('#miniFeed'), ml, {silent:true}));
   $('#rHint').textContent = 'How strong is it right now?';
   step('wave'); drawWave();
   const total = 15*MIN, C = 326.7; clearInterval(waveT);
@@ -531,10 +575,168 @@ function checkMilestones() {
   const r = reachedCount();
   if (r - 1 > S.celebrated) {
     const m = D.MILES[r - 1]; S.celebrated = r - 1; save();
-    if ($('#sos').classList.contains('hide') && $('#story').classList.contains('hide')) celebrate(m.tag + ' unlocked', m.title, m.body);
+    if ($('#sos').classList.contains('hide') && $('#story').classList.contains('hide')) celebrate(m.tag + ' unlocked', m.title, fill(m.body));
     renderBodyMap();
   }
 }
+
+/* ---------- food logger ---------- */
+const F = window.SOS_FOODS;
+const FOOD = Object.fromEntries(F.FOODS.map(f => [f.id, f]));
+let fDay = 0; // days back from today
+const fKey = () => { const n = new Date(); return dkey(new Date(n.getFullYear(), n.getMonth(), n.getDate() - fDay)); };
+const dayItems = k => (S.food[k] || []);
+const fmt1 = x => (Math.round(x*10)/10).toString();
+const fmtQ = q => q === 1 ? '' : fmt1(q) + ' × ';
+function totals(k) {
+  const t = {kcal:0, p:0, c:0, f:0, fib:0, na:0, k:0, ca:0, fe:0, vc:0};
+  dayItems(k).forEach(it => { const f = FOOD[it.id]; if (!f) return; for (const x in t) t[x] += (f[x] || 0) * it.q; });
+  return t;
+}
+function targets() {
+  const w = curWeight(), P = S.prof;
+  if (!P.age) return null;
+  const bmr = 10*w + 6.25*P.h - 5*P.age + 5;
+  const tdee = bmr * P.act;
+  const kcal = Math.max(Math.round(bmr/10)*10, Math.round((tdee - P.def)/10)*10);
+  const p = Math.round(1.6*w/5)*5;
+  const f = Math.round(kcal*0.25/9);
+  const c = Math.max(0, Math.round((kcal - p*4 - f*9)/4));
+  return {bmr:Math.round(bmr), tdee:Math.round(tdee), kcal, p, f, c};
+}
+function bar(pct, col) { return `<div class="track"><i style="width:${Math.min(100, Math.max(0, pct*100)).toFixed(1)}%;background:${col}"></i></div>`; }
+function renderFood() {
+  const k = fKey(), t = totals(k), T = targets();
+  $('#dLabel').textContent = fDay === 0 ? 'Today' : fDay === 1 ? 'Yesterday' : new Date(k).toLocaleDateString('en-IN', {weekday:'short', day:'numeric', month:'short'});
+  $('#dNext').disabled = fDay === 0;
+  // calorie ring
+  const C = 2*Math.PI*52, pct = T ? t.kcal / T.kcal : 0, over = T && t.kcal > T.kcal;
+  $('#kRing').innerHTML = `<circle cx="60" cy="60" r="52" fill="none" stroke="#1f362c" stroke-width="10"/><circle cx="60" cy="60" r="52" fill="none" stroke="${over ? '#ff6b57' : '#7ef0b5'}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C*(1-Math.min(1, pct))).toFixed(1)}"/>`;
+  if (T) { $('#kBig').textContent = Math.abs(Math.round(T.kcal - t.kcal)).toLocaleString('en-IN'); $('#kLab').textContent = over ? 'kcal over' : 'kcal left of ' + T.kcal.toLocaleString('en-IN'); }
+  else { $('#kBig').textContent = Math.round(t.kcal).toLocaleString('en-IN'); $('#kLab').textContent = 'kcal eaten'; }
+  const M = [['Protein', t.p, T && T.p, '#7ef0b5'], ['Carbs', t.c, T && T.c, '#ffd166'], ['Fat', t.f, T && T.f, '#ff9b85'], ['Fibre', t.fib, 30, '#9fd8bd']];
+  $('#macros').innerHTML = M.map(([n, v, tg, col]) => `<div class="mb"><div><span>${n}</span><b>${Math.round(v)}${tg ? ' / ' + tg : ''} g</b></div>${bar(tg ? v/tg : 0, col)}</div>`).join('');
+  $('#fNote').innerHTML = T ? '' : `<div class="note">Add your age in <b>Targets</b> below and I’ll work out your calories, protein, carbs and fat from your weight (${curWeight()} kg) and height (${S.prof.h} cm).</div>`;
+  // meals
+  $('#meals').innerHTML = F.MEALS.map(([id, name]) => {
+    const items = dayItems(k).map((it, i) => ({it, i})).filter(x => x.it.meal === id);
+    const kc = items.reduce((s, x) => s + (FOOD[x.it.id] ? FOOD[x.it.id].kcal * x.it.q : 0), 0);
+    const tpl = F.TEMPLATES.filter(tp => tp.meal === id);
+    return `<div class="meal"><div class="mh"><div><b>${name}</b> <span>${items.length ? Math.round(kc) + ' kcal' : ''}</span></div><button class="addb" data-add="${id}">+ Add</button></div>
+      ${items.map(({it, i}) => { const f = FOOD[it.id]; if (!f) return ''; return `<div class="fi"><button class="nm" data-edit="${i}"><b>${esc(f.name)}${f.pk ? '<span class="pk">Packaged</span>' : ''}</b><span>${fmtQ(it.q)}${esc(f.unit)}</span></button><div class="kc">${Math.round(f.kcal*it.q)} kcal<small>${fmt1(f.p*it.q)} g protein</small></div><button class="rm" data-rm="${i}" aria-label="Remove ${esc(f.name)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>`; }).join('')}
+      ${!items.length && tpl.length ? '<div class="tpl">' + tpl.map(tp => `<button data-tpl="${tp.id}">+ ${tp.name}</button>`).join('') + '</div>' : ''}
+      ${!items.length && !tpl.length ? `<div class="tpl"><button data-copy="${id}">Same as yesterday</button></div>` : ''}</div>`;
+  }).join('');
+  // micros
+  $('#micros').innerHTML = F.MICROS.map(m => { const v = t[m.k], p = v / m.ref, bad = m.limit && v > m.ref; return `<div class="mi"><span>${m.name}</span>${bar(p, m.limit ? (bad ? '#ff6b57' : '#ffd166') : '#7ef0b5')}<b style="color:${bad ? 'var(--coral)' : 'inherit'}">${Math.round(v).toLocaleString('en-IN')} / ${m.ref.toLocaleString('en-IN')} ${m.unit}</b></div>`; }).join('');
+  renderWeight(); renderTargets();
+}
+function addItems(meal, list) { const k = fKey(); S.food[k] = dayItems(k).concat(list.map(([id, q]) => ({meal, id, q}))); save(); renderFood(); renderFoodCard(); }
+$('#meals').addEventListener('click', e => {
+  const k = fKey(), b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.add) addSheet(b.dataset.add);
+  else if (b.dataset.tpl) { const tp = F.TEMPLATES.find(x => x.id === b.dataset.tpl); addItems(tp.meal, tp.items); toast(tp.name + ' logged.'); }
+  else if (b.dataset.copy) { const n = new Date(); const y = dkey(new Date(n.getFullYear(), n.getMonth(), n.getDate() - fDay - 1)); const src = (S.food[y] || []).filter(x => x.meal === b.dataset.copy); if (!src.length) { toast('Nothing logged for that meal yesterday.'); return; } addItems(b.dataset.copy, src.map(x => [x.id, x.q])); }
+  else if (b.dataset.rm) { S.food[k].splice(+b.dataset.rm, 1); save(); renderFood(); renderFoodCard(); }
+  else if (b.dataset.edit) editSheet(+b.dataset.edit);
+});
+$('#dPrev').onclick = () => { fDay++; renderFood(); };
+$('#dNext').onclick = () => { if (fDay > 0) fDay--; renderFood(); };
+function qtyPanel(f, q, label) {
+  return `<div class="qty"><b>${esc(f.name)}${f.pk ? '<span class="pk">Packaged</span>' : ''}</b><span class="mute" style="font-size:13px">${esc(f.unit)} · ${f.kcal} kcal · ${f.p} g protein</span>
+    <div class="row"><button class="stp" data-d="-0.5" aria-label="Less">−</button><span class="qv" id="qv">${fmt1(q)}</span><button class="stp" data-d="0.5" aria-label="More">+</button><button class="btn mint" id="qOk" style="margin-left:auto">${label}</button></div>
+    <div class="sum" id="qsum">${Math.round(f.kcal*q)} kcal · ${fmt1(f.p*q)} g protein · ${fmt1(f.c*q)} g carbs · ${fmt1(f.f*q)} g fat</div></div>`;
+}
+function bindQty(f, q0, onOk) {
+  let q = q0;
+  $$('.qty .stp').forEach(s => s.onclick = () => { q = Math.max(0.5, Math.round((q + +s.dataset.d)*2)/2); $('#qv').textContent = fmt1(q); $('#qsum').textContent = `${Math.round(f.kcal*q)} kcal · ${fmt1(f.p*q)} g protein · ${fmt1(f.c*q)} g carbs · ${fmt1(f.f*q)} g fat`; });
+  $('#qOk').onclick = () => onOk(q);
+}
+function addSheet(meal) {
+  const mealName = F.MEALS.find(m => m[0] === meal)[1];
+  const cats = ['All'].concat([...new Set(F.FOODS.map(f => f.cat))]);
+  let cat = 'All', q = '';
+  sheet(`<div class="q" style="font-size:26px;margin-bottom:10px">Add to ${mealName}</div>
+    <input class="srch" id="fSearch" type="search" placeholder="Search your foods" aria-label="Search foods">
+    <div class="cats" id="fCats">${cats.map(c => `<button data-c="${c}" class="${c === 'All' ? 'sel' : ''}">${c}</button>`).join('')}</div>
+    <div id="fQty"></div><div class="flist" id="fList"></div>
+    <button class="btn dim full" id="shClose">Done</button>`, () => {
+      const list = () => {
+        const s = q.trim().toLowerCase();
+        const fs = F.FOODS.filter(f => (cat === 'All' || f.cat === cat) && (!s || f.name.toLowerCase().includes(s)));
+        $('#fList').innerHTML = fs.map(f => `<div class="fi"><button class="nm" data-f="${f.id}"><b>${esc(f.name)}${f.pk ? '<span class="pk">Packaged</span>' : ''}</b><span>${esc(f.unit)}</span></button><div class="kc">${f.kcal} kcal<small>${f.p} g protein</small></div></div>`).join('') || '<p class="mute">No match.</p>';
+      };
+      list();
+      $('#fSearch').oninput = e => { q = e.target.value; list(); };
+      $('#fCats').onclick = e => { const b = e.target.closest('[data-c]'); if (!b) return; cat = b.dataset.c; $$('#fCats button').forEach(x => x.classList.toggle('sel', x === b)); list(); };
+      $('#fList').onclick = e => {
+        const b = e.target.closest('[data-f]'); if (!b) return; const f = FOOD[b.dataset.f];
+        $('#fQty').innerHTML = qtyPanel(f, 1, 'Add');
+        bindQty(f, 1, qq => { addItems(meal, [[f.id, qq]]); $('#fQty').innerHTML = ''; toast(f.name + ' added to ' + mealName.toLowerCase() + '.'); });
+        $('#fQty').scrollIntoView({behavior:'smooth', block:'nearest'});
+      };
+      $('#shClose').onclick = closeSheet;
+    });
+}
+function editSheet(i) {
+  const k = fKey(), it = S.food[k][i], f = FOOD[it.id];
+  sheet(`<div class="q" style="font-size:26px">Change amount</div>${qtyPanel(f, it.q, 'Save')}<button class="btn dim full" id="shClose">Cancel</button>`, () => {
+    bindQty(f, it.q, qq => { it.q = qq; save(); closeSheet(); renderFood(); renderFoodCard(); });
+    $('#shClose').onclick = closeSheet;
+  });
+}
+function renderWeight() {
+  const ws = S.weights, w = curWeight(), first = ws[0];
+  const diff = w - first.kg;
+  let spark = '';
+  if (ws.length > 1) {
+    const last = ws.slice(-20), min = Math.min(...last.map(x => x.kg)), max = Math.max(...last.map(x => x.kg)), r = (max - min) || 1;
+    const pts = last.map((x, i) => [(i/(last.length-1))*300, 52 - (x.kg - min)/r*44]);
+    spark = `<svg class="spark" viewBox="0 0 300 60" preserveAspectRatio="none" aria-hidden="true"><path d="${pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ')}" fill="none" stroke="#7ef0b5" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
+  }
+  $('#weightCard').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div><b class="num" style="font-size:30px">${w} kg</b><span class="mute" style="font-size:13px"> · ${new Date(ws[ws.length-1].d).toLocaleDateString('en-IN', {day:'numeric', month:'short'})}</span></div><span class="mute" style="font-size:13px">${ws.length > 1 ? (diff <= 0 ? '−' : '+') + Math.abs(diff).toFixed(1) + ' kg since ' + new Date(first.d).toLocaleDateString('en-IN', {day:'numeric', month:'short'}) : 'Starting point'}</span></div>
+    ${spark}<p>Liver fat starts to fall after losing 3–5% of body weight: for you, ${(w*0.03).toFixed(1)}–${(w*0.05).toFixed(1)} kg.</p>
+    <div class="row"><input id="wIn" type="number" inputmode="decimal" step="0.05" min="40" max="200" placeholder="Today’s weight, kg" aria-label="Today's weight in kg" style="flex:1;min-height:44px;border-radius:12px;border:1px solid var(--line2);background:#0a100d;color:var(--ink);padding:0 12px;font:16px Inter,sans-serif"><button class="btn mint" id="wLog">Log</button></div>`;
+  $('#wLog').onclick = () => {
+    const v = parseFloat($('#wIn').value); if (!(v > 40 && v < 200)) { toast('Enter your weight in kg, like 93.2'); return; }
+    const k = dkey(new Date()); const ex = S.weights.find(x => x.d === k);
+    if (ex) ex.kg = v; else S.weights.push({d:k, kg:v});
+    save(); renderFood(); toast('Weight logged.');
+  };
+}
+function renderTargets() {
+  const P = S.prof, T = targets();
+  $('#targetsCard').innerHTML = `<div class="frm">
+    <label>Age<input id="tAge" type="number" inputmode="numeric" min="15" max="80" value="${P.age || ''}" placeholder="Your age"></label>
+    <label>Height, cm<input id="tH" type="number" inputmode="numeric" min="120" max="230" value="${P.h}"></label>
+    <label>Activity<select id="tAct"><option value="1.2">Mostly sitting</option><option value="1.375">Gym 3–4 days</option><option value="1.55">Gym 5–6 days</option></select></label>
+    <label>Pace<select id="tDef"><option value="250">Gentle (0.25 kg/wk)</option><option value="500">Steady (0.5 kg/wk)</option></select></label></div>
+    ${T ? `<div class="tg"><div><span>Maintenance</span><b>${T.tdee.toLocaleString('en-IN')}</b></div><div><span>Your target</span><b>${T.kcal.toLocaleString('en-IN')} kcal</b></div><div><span>Protein</span><b>${T.p} g</b></div><div><span>Carbs</span><b>${T.c} g</b></div><div><span>Fat</span><b>${T.f} g</b></div></div>
+    <p style="margin-top:10px">Worked out with the Mifflin-St Jeor equation from ${curWeight()} kg and ${P.h} cm. Protein is 1.6 g per kg. The target never drops below your resting burn (${T.bmr.toLocaleString('en-IN')} kcal), because a deeper cut is what drives the night-time binges.</p>` : '<p style="margin-top:10px">Add your age to see your numbers.</p>'}`;
+  $('#tAct').value = String(P.act); $('#tDef').value = String(P.def);
+  const upd = () => { const a = parseInt($('#tAge').value, 10), h = parseInt($('#tH').value, 10); P.age = a >= 15 && a <= 80 ? a : null; if (h >= 120 && h <= 230) P.h = h; P.act = parseFloat($('#tAct').value); P.def = parseInt($('#tDef').value, 10); save(); renderFood(); renderFoodCard(); };
+  $('#tAge').onchange = upd; $('#tH').onchange = upd; $('#tAct').onchange = upd; $('#tDef').onchange = upd;
+}
+function renderFoodCard() {
+  const t = totals(dkey(new Date())), T = targets();
+  $('#foodCard').innerHTML = `<span class="ic" style="background:#3a2a10"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffd166" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M9 7c0-2 2-2 2-4M13 7c0-2 2-2 2-4"/></svg></span>
+    <span><b>${Math.round(t.kcal).toLocaleString('en-IN')}${T ? ' / ' + T.kcal.toLocaleString('en-IN') : ''} kcal today</b><span>${Math.round(t.p)}${T ? ' / ' + T.p : ''} g protein · tap to log food</span></span>
+    <svg class="go" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8fb3a2" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>`;
+}
+$('#foodCard').onclick = () => switchTab('food');
+
+/* ---------- iOS standalone viewport gap ---------- */
+function fixGap() {
+  const p = document.createElement('div'); p.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:env(safe-area-inset-top);visibility:hidden';
+  const q = document.createElement('div'); q.style.cssText = 'position:fixed;bottom:0;left:0;width:1px;height:env(safe-area-inset-bottom);visibility:hidden';
+  document.body.append(p, q);
+  const sat = p.getBoundingClientRect().height, sab = q.getBoundingClientRect().height; p.remove(); q.remove();
+  const gap = Math.round(screen.height - window.innerHeight);
+  const g = standalone() && sat > 0 && gap > 20 && gap < 140 ? gap : 0;
+  document.documentElement.style.setProperty('--gap', g + 'px');
+  const di = $('#dispInfo'); if (di) di.textContent = 'Display check: ' + window.innerHeight + ' of ' + screen.height + ' pt, top ' + Math.round(sat) + ', bottom ' + Math.round(sab) + ', adjusted ' + g + (standalone() ? ', app mode' : ', browser');
+}
+window.addEventListener('resize', fixGap);
 
 /* ---------- header, ticking ---------- */
 function tick() {
@@ -551,11 +753,13 @@ function tick() {
 
 /* ---------- tabs ---------- */
 function switchTab(t) {
+  if (t !== 'reels') { stopReel(); FX.stop(); }
   $$('.screen').forEach(s => s.classList.toggle('on', s.id === t));
   $$('.tab[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   if (t === 'reels') { reelOrder = shuffle(D.REELS); renderReels(); }
   if (t === 'stories') renderStoryList();
   if (t === 'you') renderYou();
+  if (t === 'food') renderFood();
 }
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) switchTab(b.dataset.tab); });
 
@@ -563,11 +767,12 @@ function renderMotto() {
   const n = new Date(), m = D.MOTTOS[Math.floor(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) / DAY) % D.MOTTOS.length];
   $('#mT').textContent = m.t; $('#mS').textContent = m.sub;
 }
-function renderAll() { renderMotto(); renderStoryRow(); renderComeback(); renderBodyMap(); renderWeekCard(); tick(); if ($('#you').classList.contains('on')) renderYou(); if ($('#stories').classList.contains('on')) renderStoryList(); }
+function renderAll() { renderMotto(); renderFoodCard(); if ($('#food').classList.contains('on')) renderFood(); renderStoryRow(); renderComeback(); renderBodyMap(); renderWeekCard(); tick(); if ($('#you').classList.contains('on')) renderYou(); if ($('#stories').classList.contains('on')) renderStoryList(); }
 
 /* ---------- start ---------- */
 if (!standalone() && !S.gateSkipped) $('#gate').classList.remove('hide');
 $('#gateSkip').onclick = () => { S.gateSkipped = true; save(); $('#gate').classList.add('hide'); };
+fixGap();
 renderAll();
 loadVideo();
 setInterval(tick, 1000);
