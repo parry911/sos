@@ -6,6 +6,18 @@ window.FX = (() => {
     uplift: {bpm:100, root:73.42, chord:[1, 1.26, 1.498],  hat:true,  kick:true,  heart:false}
   };
   let ac = null, master = null, drone = [], timer = 0, nextT = 0, beatN = 0, mood = null, enabled = true, onBeat = null;
+  // The person's own songs, stored on the phone. When present they replace the generated beats.
+  let tracks = [], useTracks = true, lastTrack = -1, beatTimer = 0;
+  const player = new Audio(); player.loop = true; player.preload = 'auto'; player.playsInline = true;
+  function setTracks(list, use) { tracks = list || []; useTracks = use !== false; }
+  function unlock() { try { if (!player.src && tracks.length) player.src = tracks[0].url; const p = player.play(); if (p) p.then(() => { if (!mood) player.pause(); }).catch(() => {}); } catch (e) {} }
+  function playTrack(md) {
+    let i = Math.floor(Math.random() * tracks.length); if (tracks.length > 1 && i === lastTrack) i = (i + 1) % tracks.length; lastTrack = i;
+    const t = tracks[i]; player.src = t.url; player.volume = 0;
+    const go = () => { try { player.currentTime = (player.duration || 0) * 0.3; } catch (e) {} player.play().catch(() => {}); let v = 0; const fade = setInterval(() => { v = Math.min(0.85, v + 0.08); player.volume = v; if (v >= 0.85) clearInterval(fade); }, 80); };
+    if (player.readyState >= 1) go(); else player.addEventListener('loadedmetadata', go, {once:true});
+    const bpm = MOODS[md].bpm; clearInterval(beatTimer); let b = 0; beatTimer = setInterval(() => { if (onBeat) onBeat(b++); }, 60000 / bpm);
+  }
   function ctx() {
     if (!ac) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null; ac = new AC(); master = ac.createGain(); master.gain.value = 0.32; master.connect(ac.destination); }
     if (ac.state === 'suspended') ac.resume();
@@ -36,12 +48,15 @@ window.FX = (() => {
     }
   }
   function play(md) {
-    if (!enabled) return; if (!ctx()) return;
+    if (!enabled) return;
+    md = md in MOODS ? md : 'tense';
+    if (tracks.length && useTracks) { if (mood === md && !player.paused) return; stop(); mood = md; playTrack(md); return; }
+    if (!ctx()) return;
     if (mood === md && timer) return;
-    stop(); mood = md in MOODS ? md : 'tense'; startDrone(MOODS[mood]); nextT = ac.currentTime + 0.08; beatN = 0;
+    stop(); mood = md; startDrone(MOODS[mood]); nextT = ac.currentTime + 0.08; beatN = 0;
     timer = setInterval(schedule, 60); schedule();
   }
-  function stop() { clearInterval(timer); timer = 0; if (ac) stopDrone(); mood = null; }
+  function stop() { clearInterval(timer); timer = 0; clearInterval(beatTimer); beatTimer = 0; if (ac) stopDrone(); try { player.pause(); } catch (e) {} mood = null; }
   function hush(on) { if (!master) return; const t = ac.currentTime; master.gain.cancelScheduledValues(t); master.gain.linearRampToValueAtTime(on ? 0.12 : 0.32, t + 0.25); }
   let voice = null;
   function pickVoice() { const vs = speechSynthesis.getVoices(); voice = vs.find(v => /en[-_]IN/i.test(v.lang)) || vs.find(v => /en[-_]GB/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || null; }
@@ -55,7 +70,7 @@ window.FX = (() => {
   }
   function quiet() { if ('speechSynthesis' in window) speechSynthesis.cancel(); hush(false); }
   function setEnabled(v) { enabled = v; if (!v) { stop(); quiet(); } }
-  function suspend(v) { if (!ac) return; v ? ac.suspend() : ac.resume(); if ('speechSynthesis' in window) v ? speechSynthesis.pause() : speechSynthesis.resume(); }
+  function suspend(v) { if (ac) { v ? ac.suspend() : ac.resume(); } if (mood && tracks.length && useTracks) { v ? player.pause() : player.play().catch(() => {}); } }
 
   /* ---------- scenes ---------- */
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -68,7 +83,13 @@ window.FX = (() => {
   }
   function scene(el, sc, opts = {}) {
     const color = sc.color || '#3a0d0a';
-    let h = `<div class="scene ${opts.reel ? 'reelsc' : ''}" style="--c:${color}"><div class="blobs"><i></i><i></i><i></i></div><canvas class="sfx"></canvas><div class="sc-in">`;
+    const kw = (sc.mq || (sc.fx === 'count' ? (sc.pre || '') + fmtN(sc.n) + (sc.suf || '') : String(sc.fx === 'quiz' ? sc.q : sc.big).split(' ').slice(0, 3).join(' '))).toUpperCase();
+    const mq = Array(8).fill(esc(kw)).join('<em>·</em>');
+    const heroArt = (sc.fx === 'particles' || sc.fx === 'ecg') ? '' : (sc.artSVG || '');
+    let h = `<div class="scene ${opts.reel ? 'reelsc' : ''} m-${sc.mood || 'tense'}" style="--c:${color}"><div class="blobs"><i></i><i></i><i></i></div><canvas class="emb"></canvas>
+      <div class="mq"><div>${mq}<em>·</em>${mq}</div></div>
+      <div class="hero"><div class="halo"></div><div class="rings"><i></i><i></i><i></i></div>${heroArt ? `<div class="hart">${heroArt}</div>` : ''}</div>
+      <canvas class="sfx"></canvas><div class="sc-in">`;
     if (opts.tag) h += `<span class="sc-tag ${sc.me ? 'me' : ''}">${esc(opts.tag)}</span>`;
     if (sc.fx === 'count') h += `<div class="sc-num">${esc(sc.pre || '')}<b>0</b>${esc(sc.suf || '')}</div><h3 class="sc-big small">${words(sc.big, 0.9)}</h3>`;
     else if (sc.fx === 'quiz') h += `<h3 class="sc-big">${words(sc.q, 0.1)}</h3><div class="quiz">${sc.options.map((o, i) => `<button data-o="${i}">${esc(o)}</button>`).join('')}</div>`;
@@ -76,8 +97,17 @@ window.FX = (() => {
     if (sc.fx === 'bars') { const mx = Math.max(Math.abs(sc.a[1]), Math.abs(sc.b[1])); h += `<div class="sbars">${[sc.a, sc.b].map((r, i) => `<div><span>${esc(r[0])}</span><div class="sb"><i style="--w:${(Math.abs(r[1])/mx*100).toFixed(0)}%;--dl:${1 + i*0.35}s" class="${i ? 'hot' : ''}"></i></div><b>${esc(r[1] + (sc.unit || ''))}</b></div>`).join('')}</div>`; }
     h += `<p class="sc-body ${sc.fx === 'quiz' ? 'hide' : ''}">${esc(sc.body || '')}</p>${sc.src ? `<small class="sc-src ${sc.fx === 'quiz' ? 'hide' : ''}">${esc(sc.src)}</small>` : ''}</div></div>`;
     el.innerHTML = h;
-    const root = el.firstChild, cv = root.querySelector('.sfx');
-    let raf = 0, alive = true;
+    const root = el.firstElementChild, cv = root.querySelector('.sfx');
+    let raf = 0, raf2 = 0, alive = true;
+    // embers: slow sparks rising behind everything
+    { const ec = root.querySelector('.emb'), r0 = root.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+      if (r0.width) { ec.width = r0.width * dpr; ec.height = r0.height * dpr; const g = ec.getContext('2d'); g.scale(dpr, dpr);
+        const W = r0.width, H = r0.height, col = sc.mood === 'uplift' ? '126,240,181' : sc.mood === 'pulse' ? '255,107,87' : '255,170,110';
+        const es = Array.from({length: 46}, () => ({x: Math.random()*W, y: Math.random()*H, r: 0.6 + Math.random()*2.2, v: 0.15 + Math.random()*0.55, w: Math.random()*6.28}));
+        const step = () => { if (!alive) return; g.clearRect(0, 0, W, H); es.forEach(e => { e.y -= e.v; e.w += 0.02; e.x += Math.sin(e.w) * 0.3; if (e.y < -10) { e.y = H + 10; e.x = Math.random()*W; } const a = 0.25 + 0.5 * Math.min(1, e.y / H); g.beginPath(); g.fillStyle = `rgba(${col},${a.toFixed(2)})`; g.shadowColor = `rgba(${col},0.9)`; g.shadowBlur = 8; g.arc(e.x, e.y, e.r, 0, 7); g.fill(); }); raf2 = requestAnimationFrame(step); };
+        raf2 = requestAnimationFrame(step); } }
+    // keep big numbers on one line inside the screen
+    { const nb = root.querySelector('.sc-num'); if (nb) { const fit = () => { let fs = parseFloat(getComputedStyle(nb).fontSize), i = 0; while (nb.scrollWidth > nb.clientWidth + 1 && i++ < 14) { fs *= 0.92; nb.style.fontSize = fs + 'px'; } }; requestAnimationFrame(() => { fit(); setTimeout(fit, 900); setTimeout(fit, 1800); }); } }
     // count-up
     if (sc.fx === 'count') { const b = root.querySelector('.sc-num b'), from = sc.from || 0, t0 = performance.now() + 250; const f = t => { if (!alive) return; const p = Math.min(1, Math.max(0, (t - t0) / 1400)), e = 1 - Math.pow(1 - p, 3); b.textContent = fmtN(from + (sc.n - from) * e); if (p < 1) raf = requestAnimationFrame(f); }; raf = requestAnimationFrame(f); }
     // canvas effects
@@ -105,13 +135,11 @@ window.FX = (() => {
         const ok = +b.dataset.o === sc.answer;
         root.querySelectorAll('.quiz button').forEach((x, i) => x.classList.add(i === sc.answer ? 'right' : (x === b ? 'wrong' : 'dim')));
         root.querySelector('.sc-body').classList.remove('hide'); const s2 = root.querySelector('.sc-src'); if (s2) s2.classList.remove('hide');
-        if (opts.voice !== false) say((ok ? 'Right. ' : 'No. ') + (sc.body || ''));
         if (opts.onQuiz) opts.onQuiz(ok);
       });
     }
     onBeat = () => { if (!alive) return; root.classList.remove('beat'); void root.offsetWidth; root.classList.add('beat'); };
-    if (opts.voice !== false) setTimeout(() => { if (alive) say(speakText(sc)); }, 350);
-    return { stop() { alive = false; cancelAnimationFrame(raf); } };
+    return { stop() { alive = false; cancelAnimationFrame(raf); cancelAnimationFrame(raf2); } };
   }
-  return {play, stop, say, quiet, scene, setEnabled, suspend, ctx, get enabled() { return enabled; }};
+  return {play, stop, quiet, scene, setEnabled, suspend, ctx, setTracks, unlock, get enabled() { return enabled; }};
 })();

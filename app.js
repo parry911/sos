@@ -95,6 +95,12 @@ const ART = {
   heart: () => `<svg viewBox="0 0 200 200" aria-hidden="true"><path d="M100 170 C40 120 20 90 30 64 C42 34 82 30 100 60 C118 30 158 34 170 64 C180 90 160 120 100 170Z" fill="#ff6b57"/><path d="M40 100 H76 L88 76 L104 124 L116 100 H160" fill="none" stroke="#fff" stroke-width="6" stroke-linejoin="round"/></svg>`,
   liver: () => `<svg viewBox="0 0 200 200" aria-hidden="true"><path d="M24 86 C30 50 110 40 172 62 C186 70 180 96 160 110 C130 132 92 150 62 140 C36 130 20 110 24 86Z" fill="#b8865b"/><g fill="#f2d9a6aa"><circle cx="70" cy="90" r="9"/><circle cx="100" cy="80" r="7"/><circle cx="126" cy="98" r="10"/><circle cx="92" cy="114" r="6"/></g></svg>`,
   brain: () => `<svg viewBox="0 0 200 200" aria-hidden="true"><path d="M60 150 C30 140 26 100 44 86 C34 60 60 36 86 44 C96 26 130 28 140 46 C166 44 182 72 168 94 C182 116 162 146 136 142 C124 160 84 162 60 150Z" fill="#d9a0b0"/><path d="M100 46 V150 M64 92 C80 86 92 100 100 96 M136 90 C120 84 110 100 100 104 M70 124 C84 118 92 130 100 126" fill="none" stroke="#8a4a5a" stroke-width="5" stroke-linecap="round"/></svg>`,
+  moon: () => `<svg viewBox="0 0 200 200" aria-hidden="true"><path d="M128 30a74 74 0 1 0 42 128A64 64 0 0 1 128 30z" fill="#f3e6c8"/><g fill="#fff"><circle cx="40" cy="44" r="3"/><circle cx="62" cy="20" r="2"/><circle cx="166" cy="30" r="2.5"/></g></svg>`,
+  salt: () => `<svg viewBox="0 0 200 200" aria-hidden="true"><path d="M66 70h68l10 110H56z" fill="#e8eef2"/><path d="M70 40h60v30H70z" fill="#9fb3c4"/><g fill="#5a6b78"><circle cx="86" cy="54" r="4"/><circle cx="100" cy="50" r="4"/><circle cx="114" cy="54" r="4"/></g><g fill="#fff"><circle cx="40" cy="120" r="3"/><circle cx="160" cy="100" r="3"/><circle cx="150" cy="150" r="2"/></g></svg>`,
+  hourglass: () => `<svg viewBox="0 0 200 200" aria-hidden="true"><rect x="50" y="20" width="100" height="14" rx="7" fill="#d9a066"/><rect x="50" y="166" width="100" height="14" rx="7" fill="#d9a066"/><path d="M62 34h76c0 40-30 50-30 66s30 26 30 66H62c0-40 30-50 30-66s-30-26-30-66z" fill="#ffffff22" stroke="#ffffffaa" stroke-width="3"/><path d="M76 150h48c-6-14-18-18-24-26-6 8-18 12-24 26z" fill="#ff6b57"/></svg>`,
+  male: () => `<svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="86" cy="116" r="50" fill="none" stroke="#7fb6ff" stroke-width="14"/><path d="M122 80l42-42M130 38h34v34" fill="none" stroke="#7fb6ff" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  flask: () => `<svg viewBox="0 0 200 200" aria-hidden="true"><path d="M80 24h40v54l44 82a14 14 0 0 1-12 20H48a14 14 0 0 1-12-20l44-82z" fill="#ffffff1f" stroke="#ffffffaa" stroke-width="4"/><path d="M58 130h84l18 32a8 8 0 0 1-7 12H47a8 8 0 0 1-7-12z" fill="#ffd166"/><g fill="#fff8"><circle cx="90" cy="146" r="6"/><circle cx="112" cy="156" r="4"/></g></svg>`,
+  patty: () => `<svg viewBox="0 0 200 200" aria-hidden="true"><path d="M30 150 L100 40 L170 150Z" fill="#e0a85a"/><path d="M42 140 L100 52 L158 140Z" fill="#f0c27a"/><g stroke="#c98a3a" stroke-width="3"><path d="M60 128h80M72 108h56M84 88h32"/></g></svg>`,
   pipe: () => `<svg viewBox="0 0 200 200" aria-hidden="true"><path d="M10 70 H70 C100 70 110 90 130 90 H190 V110 H130 C110 110 100 130 70 130 H10Z" fill="#ff6b5733" stroke="#ff6b57" stroke-width="4"/><path d="M10 84 H70 C96 84 108 98 130 98 H190 V102 H130 C108 102 96 116 70 116 H10Z" fill="#ff6b57"/></svg>`
 };
 
@@ -126,14 +132,14 @@ function bodySVG() {
   </svg>`;
 }
 function renderBodyMap() {
-  const r = reachedCount(), ms = streakMs();
-  let h = bodySVG();
+  const ms = streakMs();
+  let h = '<div class="figwrap">' + bodySVG() + '</div><div class="ogrid">';
   for (const o of D.ORGANS) {
     const i = D.MILES.findIndex(m => m.organ === o.id), m = D.MILES[i], st = organState(o.id);
     const sub = st === 'on' ? (o.id === 'arteries' ? 'Recovering now' : 'Repairing') : st === 'next' ? m.tag + ' · in <em style="font-style:normal" data-cd="' + m.h + '">' + dur(m.h*HR - ms) + '</em>' : 'Locked · ' + m.tag;
-    h += `<button class="chip ${o.side} ${st}" style="top:${o.top}%" data-mile="${i}"><i></i><span style="white-space:normal"><b>${o.name}</b><span>${sub}</span></span></button>`;
+    h += `<button class="chip ${st}" data-mile="${i}"><i></i><span><b>${o.name}</b><span>${sub}</span></span></button>`;
   }
-  $('#bodymap').innerHTML = h;
+  $('#bodymap').innerHTML = h + '</div>';
 }
 $('#bodymap').addEventListener('click', e => { const b = e.target.closest('[data-mile]'); if (b) mileSheet(+b.dataset.mile); });
 
@@ -162,19 +168,17 @@ function availableDecks() {
   return (v ? [v] : []).concat(D.DECKS.filter(d => n >= d.unlock));
 }
 function isSeen(d) { return d.video ? S.seen.you === dkey(new Date()) : !!S.seen[d.id]; }
-function bubStyle(d) { return d.video ? (S.poster ? `background-image:url(${S.poster})` : 'background:#2b4d3f') : `background:${d.color}`; }
+function bubStyle(d) { const img = S.avatar || S.poster; return d.video ? (img ? `background-image:url(${img})` : 'background:#2b4d3f') : `background:${d.color}`; }
 function renderStoryRow() {
   const decks = availableDecks().sort((a, b) => (isSeen(a) - isSeen(b)) || (a.video ? -1 : 0));
   const n = daysSinceInstall();
   const locked = D.DECKS.filter(d => n < d.unlock).slice(0, 1);
   $('#storyRow').innerHTML = decks.map(d => `<button class="st" data-deck="${d.id}"><span class="ring ${isSeen(d)?'seen':''}"><span class="bub" style="${bubStyle(d)}">${d.video?'':d.glyph}</span></span><small>${d.label}</small></button>`).join('') +
     locked.map(d => `<div class="st locked"><span class="ring lock"><span class="bub" style="background:#13251e;color:#8fb3a2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span></span><small>Tomorrow</small></div>`).join('') +
-    (videoURL ? '' : `<button class="st" id="addVid"><span class="ring seen"><span class="bub" style="background:#13251e;font-size:26px">+</span></span><small>Add video</small></button>`) +
-    `<button class="allst" id="allStories">See all</button>`;
+    (videoURL ? '' : `<button class="st" id="addVid"><span class="ring seen"><span class="bub" style="background:#13251e;font-size:26px">+</span></span><small>Add video</small></button>`);
 }
 $('#storyRow').addEventListener('click', e => {
   if (e.target.closest('#addVid')) { switchTab('you'); return; }
-  if (e.target.closest('#allStories')) { switchTab('stories'); return; }
   const b = e.target.closest('[data-deck]'); if (!b) return;
   const decks = availableDecks().sort((a, b) => (isSeen(a) - isSeen(b)) || (a.video ? -1 : 0));
   openStories(decks, decks.findIndex(d => d.id === b.dataset.deck));
@@ -204,7 +208,7 @@ FX.setEnabled(S.sound);
 function setSound(v) { S.sound = v; save(); FX.setEnabled(v); $$('.sndbtn').forEach(b => { b.innerHTML = (v ? SPK_ON : SPK_OFF) + (b.dataset.lab ? '<span>' + (v ? 'Sound' : 'Muted') + '</span>' : ''); b.setAttribute('aria-label', v ? 'Mute' : 'Turn sound on'); }); }
 function openStories(decks, di) {
   if (di < 0) return;
-  FX.ctx();
+  FX.ctx(); FX.unlock();
   SV.decks = decks; SV.di = di; SV.fi = 0;
   $('#story').classList.remove('hide');
   setSound(S.sound);
@@ -228,7 +232,7 @@ function renderFrame() {
     stv.play().catch(() => { $('#sMeta').textContent = 'Tap to play'; });
   } else {
     stv.pause(); stv.classList.add('hide'); $('#sScene').classList.remove('hide');
-    const f = Object.assign({}, d.frames[SV.fi]); f.body = fill(f.body || ''); f.big = fill(f.big || ''); f.color = d.color;
+    const f = Object.assign({}, d.frames[SV.fi]); f.body = fill(f.body || ''); f.big = fill(f.big || ''); f.color = d.color; f.mood = d.mood; const ak = f.art || d.art; f.artSVG = ak && ART[ak] ? ART[ak]() : '';
     if (f.fx === 'quiz') SV.quiz = true;
     FX.play(d.mood || 'tense');
     SV.ctrl = FX.scene($('#sScene'), f, {onQuiz: () => { SV.quiz = false; SV.el = Math.max(0, SV.dur - 4500); SV.t0 = performance.now(); }});
@@ -277,7 +281,7 @@ function startReel(el, list, opts = {}) {
   stopReel();
   activeReel = el;
   const r = list.find(x => x.id === el.dataset.id); if (!r) return;
-  const sc = Object.assign({}, r, {color: reelColor(r, +el.dataset.i)});
+  const sc = Object.assign({}, r, {color: reelColor(r, +el.dataset.i), artSVG: r.art && ART[r.art] ? ART[r.art]() : ''});
   reelCtrl = FX.scene(el.querySelector('.rscene'), sc, {reel:true, tag: r.me ? 'From your own orders' : r.good ? 'Good news' : 'Statutory warning', voice: !opts.silent});
   if (!opts.silent) FX.play(r.mood || 'tense');
   const bar = el.querySelector('.rprog i'); if (bar) { bar.style.animation = 'none'; void bar.offsetWidth; bar.style.animation = ''; }
@@ -305,10 +309,10 @@ function togglePin(id, reel) {
 let lastTap = {t:0, id:null};
 function reelClick(e, container) {
   const pb = e.target.closest('[data-pin]'); const reel = e.target.closest('.reel');
-  if (e.target.closest('.sndbtn')) { FX.ctx(); setSound(!S.sound); if (S.sound && activeReel) { const r = reelList.find(x => x.id === activeReel.dataset.id); FX.play((r && r.mood) || 'tense'); } return; }
+  if (e.target.closest('.sndbtn')) { FX.ctx(); FX.unlock(); setSound(!S.sound); if (S.sound && activeReel) { const r = reelList.find(x => x.id === activeReel.dataset.id); FX.play((r && r.mood) || 'tense'); } return; }
   if (pb) { togglePin(pb.dataset.pin, reel); return; }
   if (!reel || e.target.closest('.quiz')) return;
-  FX.ctx();
+  FX.ctx(); FX.unlock();
   const now = Date.now();
   if (lastTap.id === reel.dataset.id && now - lastTap.t < 320) {
     if (!S.pinned.includes(reel.dataset.id)) togglePin(reel.dataset.id, reel);
@@ -347,6 +351,7 @@ function renderHours() {
 }
 function renderYou() {
   renderCal(); renderTriggers(); renderHours();
+  $('#avStatus').textContent = S.avatar ? 'Set. It shows on your story ring.' : 'Shown on your story ring. It stays on this phone.';
   $('#vidStatus').textContent = videoURL ? 'Added. It plays first in every SOS and sits first in your stories. It never leaves this phone.' : 'Not added yet. Save the video from our chat to Photos or Files, then pick it here. It stays on this phone.';
   $('#syncWidget').href = widgetURL();
 }
@@ -732,12 +737,41 @@ function fixGap() {
   document.body.append(p, q);
   const sat = p.getBoundingClientRect().height, sab = q.getBoundingClientRect().height; p.remove(); q.remove();
   const gap = Math.round(screen.height - window.innerHeight);
-  const g = standalone() && sat > 0 && gap > 20 && gap < 140 ? gap : 0;
+  const g = 0;
   document.documentElement.style.setProperty('--gap', g + 'px');
   const di = $('#dispInfo'); if (di) di.textContent = 'Display check: ' + window.innerHeight + ' of ' + screen.height + ' pt, top ' + Math.round(sat) + ', bottom ' + Math.round(sab) + ', adjusted ' + g + (standalone() ? ', app mode' : ', browser');
 }
 window.addEventListener('resize', fixGap);
 
+
+/* ---------- profile photo and your own music (both stay on this phone) ---------- */
+$('#seeAll').onclick = () => switchTab('stories');
+$('#avFile').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  const img = new Image(), url = URL.createObjectURL(f);
+  img.onload = () => { const c = document.createElement('canvas'), s = Math.min(img.width, img.height); c.width = c.height = 320; c.getContext('2d').drawImage(img, (img.width - s)/2, (img.height - s)/2, s, s, 0, 0, 320, 320); S.avatar = c.toDataURL('image/jpeg', .82); save(); URL.revokeObjectURL(url); toast('Profile photo saved.'); renderAll(); };
+  img.onerror = () => toast('Could not read that photo.');
+  img.src = url;
+});
+let music = [];
+async function loadMusic() {
+  try { const m = await idbGet('music'); music = (m || []).map(t => Object.assign({}, t, {url: URL.createObjectURL(new Blob([t.buf], {type: t.type || 'audio/mpeg'}))})); } catch (e) { music = []; }
+  FX.setTracks(music, S.music !== false); renderMusic();
+}
+async function saveMusic() { try { await idbPut('music', music.map(t => ({id:t.id, name:t.name, type:t.type, buf:t.buf}))); } catch (e) { toast('Could not save songs. Try fewer or shorter files.'); } FX.setTracks(music, S.music !== false); renderMusic(); }
+function renderMusic() {
+  const el = $('#musicList'); if (!el) return;
+  el.innerHTML = music.length ? music.map(t => `<div class="fi"><span class="nm"><b>${esc(t.name)}</b></span><button class="rm" data-mrm="${t.id}" aria-label="Remove ${esc(t.name)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>`).join('') : '<p class="mute" style="margin:0">No songs yet. The built-in beats play until you add some.</p>';
+  $('#musUse').checked = S.music !== false;
+}
+$('#musFile').addEventListener('change', async e => {
+  const fs = Array.from(e.target.files || []); if (!fs.length) return;
+  toast('Adding ' + fs.length + (fs.length === 1 ? ' song…' : ' songs…'));
+  for (const f of fs) { const buf = await f.arrayBuffer(); music.push({id: Date.now() + '-' + Math.random().toString(36).slice(2, 7), name: f.name.replace(/\.[^.]+$/, ''), type: f.type, buf, url: URL.createObjectURL(f)}); }
+  await saveMusic(); toast('Songs added.');
+});
+$('#musicList').addEventListener('click', e => { const b = e.target.closest('[data-mrm]'); if (!b) return; music = music.filter(t => t.id !== b.dataset.mrm); saveMusic(); });
+$('#musUse').addEventListener('change', e => { S.music = e.target.checked; save(); FX.setTracks(music, S.music !== false); });
 /* ---------- header, ticking ---------- */
 function tick() {
   const ms = streakMs(), d = Math.floor(ms / DAY), h = Math.floor(ms % DAY / HR), m = Math.floor(ms % HR / MIN);
@@ -763,10 +797,14 @@ function switchTab(t) {
 }
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) switchTab(b.dataset.tab); });
 
+let hardI = null;
 function renderMotto() {
-  const n = new Date(), m = D.MOTTOS[Math.floor(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) / DAY) % D.MOTTOS.length];
-  $('#mT').textContent = m.t; $('#mS').textContent = m.sub;
+  const n = new Date(), base = Math.floor(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) / DAY) % D.HARD.length;
+  if (hardI === null) hardI = base;
+  const h = D.HARD[hardI % D.HARD.length];
+  $('#mT').textContent = h.t; $('#mS').textContent = h.d; $('#mSrc').textContent = h.s;
 }
+$('#hard').onclick = () => { hardI = (hardI === null ? 0 : hardI) + 1; renderMotto(); };
 function renderAll() { renderMotto(); renderFoodCard(); if ($('#food').classList.contains('on')) renderFood(); renderStoryRow(); renderComeback(); renderBodyMap(); renderWeekCard(); tick(); if ($('#you').classList.contains('on')) renderYou(); if ($('#stories').classList.contains('on')) renderStoryList(); }
 
 /* ---------- start ---------- */
@@ -775,6 +813,7 @@ $('#gateSkip').onclick = () => { S.gateSkipped = true; save(); $('#gate').classL
 fixGap();
 renderAll();
 loadVideo();
+loadMusic();
 setInterval(tick, 1000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) renderAll(); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

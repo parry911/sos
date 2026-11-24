@@ -29,7 +29,8 @@
     </div>
     <div class="nx"><span>Next unlock</span><b id="hNext">Day 1</b><span id="hNextIn"></span></div>
   </div>
-  <div class="motto"><b id="mT"></b><span id="mS"></span></div>
+  <button class="hard" id="hard"><span class="hlab">Today’s hard truth · tap for another</span><b id="mT"></b><span id="mS"></span><small id="mSrc"></small></button>
+  <div class="rowh"><b>Stories</b><button id="seeAll">See all</button></div>
   <div class="stories" id="storyRow"></div>
   <div id="comeback"></div>
   <div class="bodymap" id="bodymap"></div>
@@ -105,6 +106,17 @@
     <b>Your SOS video</b>
     <p id="vidStatus">Not added yet. Save the video from our chat to Photos or Files, then pick it here. It stays on this phone.</p>
     <div class="row"><label class="btn mint" for="vidFile" style="display:inline-grid;place-items:center">Choose video</label><input type="file" id="vidFile" accept="video/*" class="hide"></div>
+  </div>
+  <div class="set">
+    <b>Profile photo</b>
+    <p id="avStatus">Shown on your story ring. It stays on this phone.</p>
+    <div class="row"><label class="btn dim" for="avFile" style="display:inline-grid;place-items:center">Choose photo</label><input type="file" id="avFile" accept="image/*" class="hide"></div>
+  </div>
+  <div class="set">
+    <b>Your music</b>
+    <p>Add songs you have on this phone (from Files). Stories and reels play them instead of the built-in beats, starting partway in. They never leave this phone.</p>
+    <div id="musicList"></div>
+    <div class="row" style="margin-top:8px"><label class="btn dim" for="musFile" style="display:inline-grid;place-items:center">Add songs</label><input type="file" id="musFile" accept="audio/*" multiple class="hide"><label style="display:flex;align-items:center;gap:8px;font-size:14px;min-height:44px"><input type="checkbox" id="musUse" style="width:20px;height:20px"> Use my songs</label></div>
   </div>
   <div class="set">
     <b>Lock-screen widget</b>
