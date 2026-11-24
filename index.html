@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0a100d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SOS">
+<title>SOS</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- BODY (home) -->
+<section class="screen on" id="body"><div class="wrap">
+  <div class="hdr">
+    <div>
+      <div class="lab">Junk-free</div>
+      <div class="big num" id="hTime">0h 00m</div>
+      <div class="sub" id="hSub">₹0 kept</div>
+    </div>
+    <div class="nx"><span>Next unlock</span><b id="hNext">Day 1</b><span id="hNextIn"></span></div>
+  </div>
+  <div class="stories" id="storyRow"></div>
+  <div id="comeback"></div>
+  <div class="bodymap" id="bodymap"></div>
+  <div class="tiles">
+    <div class="tile"><span>Streak</span><b class="num" id="tDays">0 days</b></div>
+    <div class="tile"><span>Waves won</span><b class="num" id="tWaves">0</b></div>
+    <div class="tile"><span>Kept</span><b class="num" id="tKept">₹0</b></div>
+  </div>
+  <div id="weekCard"></div>
+  <button class="card" id="openKitchen">
+    <span class="ic" style="background:#3a2a10"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffd166" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M9 7c0-2 2-2 2-4M13 7c0-2 2-2 2-4"/></svg></span>
+    <span><b>Mom’s kitchen</b><span>A home version of every craving</span></span>
+    <svg class="go" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8fb3a2" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+  </button>
+  <button class="card" id="openMiles">
+    <span class="ic" style="background:var(--mint2)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7ef0b5" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span>
+    <span><b>Every milestone</b><span>What repairs at each stage, with the study</span></span>
+    <svg class="go" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8fb3a2" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+  </button>
+</div></section>
+
+<!-- STORIES list -->
+<section class="screen" id="stories"><div class="wrap">
+  <h1>Stories</h1>
+  <p class="mute" style="margin-top:-6px">True cases and your own numbers. A new one unlocks every day.</p>
+  <div id="storyList" class="mlist"></div>
+</div></section>
+
+<!-- REELS -->
+<section class="screen" id="reels">
+  <div class="rtop"><button class="on" id="rAll">For you</button><button id="rPin">Pinned</button></div>
+  <div class="feed" id="feed"></div>
+</section>
+
+<!-- YOU -->
+<section class="screen" id="you"><div class="wrap">
+  <h1>You</h1>
+  <div class="cal" id="cal"></div>
+  <div class="legend"><span style="--c:#4a1a14">Order or slip</span><span style="--c:var(--mint2)">Clean</span><span style="--c:var(--mint)">Wave won</span></div>
+  <p class="mute" style="font-size:12px;margin:6px 0 0">Before 25 November: from your Zomato, Swiggy and Blinkit history.</p>
+  <button class="card" id="weekBtn">
+    <span class="ic" style="background:#2a1411"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ff6b57" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+    <span><b>Your week, wrapped</b><span>Waves, triggers, peak hours, money kept</span></span>
+    <svg class="go" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8fb3a2" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+  </button>
+  <h2>What sets you off</h2>
+  <div id="trigBars" class="bars"></div>
+  <h2>When cravings hit</h2>
+  <div id="hours"></div>
+  <button class="btn dim full" id="slipBtn" style="margin-top:22px">I slipped</button>
+
+  <h2>Setup</h2>
+  <div class="set">
+    <b>Your SOS video</b>
+    <p id="vidStatus">Not added yet. Save the video from our chat to Photos or Files, then pick it here. It stays on this phone.</p>
+    <div class="row"><label class="btn mint" for="vidFile" style="display:inline-grid;place-items:center">Choose video</label><input type="file" id="vidFile" accept="video/*" class="hide"></div>
+  </div>
+  <div class="set">
+    <b>Lock-screen widget</b>
+    <p>Sends your current streak start to the Scriptable widget. Do it after you log a slip.</p>
+    <div class="row"><a class="btn dim" id="syncWidget" href="#" style="display:inline-grid;place-items:center;text-decoration:none">Sync widget now</a></div>
+  </div>
+  <details class="set"><summary>Set up the widget (once)</summary><ol>
+    <li>Install <b>Scriptable</b> from the App Store (free).</li>
+    <li>Open <code>parry911.github.io/sos/scriptable/</code> in Safari, copy <b>SOS Widget</b>, and in Scriptable tap + and paste it. Name the script exactly <code>SOS Widget</code>.</li>
+    <li>Do the same with <b>SOS Sync</b>, named exactly <code>SOS Sync</code>.</li>
+    <li>Come back here and tap <b>Sync widget now</b>. Scriptable opens for a second and saves your streak.</li>
+    <li>Long-press your Lock Screen → Customise → Lock Screen → tap the widget area → Scriptable. Tap the new widget and choose script <b>SOS Widget</b>.</li>
+  </ol></details>
+  <details class="set"><summary>Night alert (once)</summary><ol>
+    <li>Open <b>Shortcuts</b> → Automation → + → <b>Time of Day</b>.</li>
+    <li>Set <b>9:00 PM</b>, Daily, and choose <b>Run Immediately</b>.</li>
+    <li>Add the action <b>Show Notification</b> with: <code>Danger window opens. Dinner done? If a craving hits, open SOS first.</code></li>
+    <li>Optional: make a second one at <b>11:30 PM</b> with <code>This is when you order. Not tonight.</code></li>
+  </ol></details>
+  <div class="set">
+    <b>Backup</b>
+    <p>Your streak lives on this phone. Copy a backup now and then and keep it in Notes.</p>
+    <div class="row"><button class="btn dim" id="copyBackup">Copy backup</button><button class="btn dim" id="showRestore">Restore</button></div>
+    <div id="restoreBox" class="hide" style="margin-top:10px"><textarea id="restoreText" aria-label="Paste backup"></textarea><button class="btn mint full" id="doRestore">Restore this backup</button></div>
+  </div>
+</div></section>
+
+<!-- TAB BAR -->
+<nav class="tabs" id="tabs">
+  <button class="tab on" data-tab="body"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><path d="M12 8v7M7 10h10M9 22l3-7 3 7"/></svg>Body</button>
+  <button class="tab" data-tab="stories"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-dasharray="4 3"/></svg>Stories</button>
+  <button class="tab sos" id="sosTab" aria-label="I want to order"><span>SOS</span></button>
+  <button class="tab" data-tab="reels"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M10 9v6l5-3z" fill="currentColor"/></svg>Reels</button>
+  <button class="tab" data-tab="you"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>You</button>
+</nav>
+
+<!-- SOS FLOW -->
+<section class="ov hide" id="sos" role="dialog" aria-modal="true" aria-label="SOS">
+  <div class="ovbar"><div class="prog"><i id="sProg"></i></div><button class="x" id="sClose" aria-label="Close"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+
+  <div class="step" id="s-video">
+    <video id="svid" playsinline preload="auto"></video>
+    <div class="vfoot"><span id="vHint">Watch yourself first.</span><button class="btn dim" id="vSkip" disabled>Skip in 30s</button></div>
+  </div>
+
+  <div class="step" id="s-want"><div class="in">
+    <div class="q">What were you about to order?</div>
+    <div class="grid2" id="craves"></div>
+    <div id="dish1"></div>
+    <div class="ask hide" id="ask">
+      <p>Honest test: would you eat 4 plain boiled eggs right now?</p>
+      <div class="two"><button class="btn" id="hYes">Yes, I’m hungry</button><button class="btn coral" id="hNo">No, I want that</button></div>
+    </div>
+  </div></div>
+
+  <div class="step" id="s-hungry"><div class="in">
+    <div class="q">That’s real hunger. Feed it real food.</div>
+    <div id="dish2"></div>
+    <p class="mute" style="font-size:14px">Hunger after a skipped meal is what usually turns into a 1 AM order. Eat now and you’ve already won this one.</p>
+    <button class="btn mint full" id="ateReal">Done, I ate real food</button>
+  </div></div>
+
+  <div class="step" id="s-wave"><div class="in">
+    <div class="wtop">
+      <div class="timer"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="52" fill="none" stroke="#1f362c" stroke-width="10"/><circle id="arc" cx="60" cy="60" r="52" fill="none" stroke="#7ef0b5" stroke-width="10" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="0"/></svg><b class="num" id="mmss">15:00</b></div>
+      <div class="wtext"><p>That’s wanting, not hunger. A craving rises, peaks and falls, usually within minutes, if you don’t feed it. Rate it and watch it fall.</p><p class="hint" id="rHint">How strong is it right now?</p></div>
+    </div>
+    <div class="rate" id="rate"></div>
+    <div class="wfig"><svg id="wave"></svg></div>
+    <div class="minifeed" id="miniFeed"></div>
+    <div class="two" style="margin-top:12px"><button class="btn dim" id="gone">It’s gone</button><button class="btn dim" id="nextReel">Next warning</button></div>
+  </div></div>
+
+  <div class="step" id="s-end"><div class="in">
+    <div class="q" id="endQ">The wave is over. Did it pass?</div>
+    <div class="two"><button class="btn mint" id="won">Yes, I won</button><button class="btn coral" id="still">I still want it</button></div>
+  </div></div>
+
+  <div class="step" id="s-advice"><div class="in">
+    <div class="q">Then eat a real meal first.</div>
+    <div id="dish3"></div>
+    <p>Most cravings don’t survive a full stomach. If you still order after a proper meal, eat it slowly at a table with your phone down. Notice what it tastes like after the fifth bite, and how you feel 20 minutes later.</p>
+    <p><b>One slip is a mistake. Two in a row is the habit.</b> Your next meal is real food, and no skipping meals to make up for it.</p>
+    <div class="two"><button class="btn mint" id="realFirst">I’ll eat real food</button><button class="btn dim" id="ordered">I ordered</button></div>
+  </div></div>
+
+  <div class="step" id="s-reward"><div class="in" style="text-align:center">
+    <div class="mute" id="rwWhen">Wave won</div>
+    <div class="big-win" id="rwTitle">You didn’t order.</div>
+    <div class="mute">Scratch to see what you won.</div>
+    <div class="scratch" id="scratch"><small id="rwTag">Reward</small><b id="rwHead"></b><p id="rwBody"></p><canvas id="scv"></canvas></div>
+    <button class="btn full" id="rwHome" style="margin-top:22px">Back to your body</button>
+  </div></div>
+</section>
+
+<!-- STORY VIEWER -->
+<section class="ov hide" id="story" aria-label="Story">
+  <div class="segs" id="segs"></div>
+  <div class="shead"><div class="bub" id="sBub"></div><div style="flex:1"><b id="sName"></b><span id="sMeta"></span></div><button class="x" id="stClose" aria-label="Close story"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <video id="stvid" playsinline class="hide"></video>
+  <div class="sbody" id="sBody"><div class="art" id="sArt"></div><h3 id="sBig"></h3><p id="sText"></p><small id="sSrc"></small></div>
+  <div class="shint">Tap to go on · hold to pause</div>
+</section>
+
+<!-- CELEBRATION -->
+<section class="ov hide" id="cele" role="dialog" aria-modal="true">
+  <canvas id="conf"></canvas>
+  <div class="tagc" id="cTag"></div>
+  <h2 id="cTitle"></h2>
+  <p id="cBody"></p>
+  <button class="btn mint" id="cOk">Keep going</button>
+</section>
+
+<!-- INSTALL GATE -->
+<section class="ov hide" id="gate">
+  <div class="wrap">
+    <div style="width:84px;height:84px;border-radius:22px;background:url(icon-180.png) center/cover"></div>
+    <h1 style="margin-top:18px">Put SOS on your home screen first</h1>
+    <p class="mute">Opened from its icon it runs full-screen like an app, and your video and streak are saved inside it.</p>
+    <ol>
+      <li>Tap the <b>Share</b> button in Safari.</li>
+      <li>Tap <b>Add to Home Screen</b>, keep the name <b>SOS</b>, tap <b>Add</b>.</li>
+      <li>Drag the new icon to where Blinkit or Zomato used to be.</li>
+      <li>Open SOS from that icon, not from Safari.</li>
+    </ol>
+    <button class="btn dim full" id="gateSkip" style="margin-top:24px">Continue in the browser anyway</button>
+  </div>
+</section>
+
+<div id="layer"></div>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

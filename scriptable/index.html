@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SOS Scriptable scripts</title>
+<style>body{margin:0;background:#0a100d;color:#eef7f1;font:16px/1.5 -apple-system,Inter,sans-serif;padding:24px 16px}
+.w{max-width:640px;margin:0 auto}h1{font-size:26px;margin:0 0 6px}p{color:#8fb3a2}
+.box{background:#0f1f19;border:1px solid #2b4d3f;border-radius:16px;padding:14px;margin-top:16px}
+pre{overflow:auto;max-height:220px;font-size:12px;background:#000;padding:10px;border-radius:10px;white-space:pre}
+button{min-height:48px;padding:0 18px;border:0;border-radius:12px;background:#7ef0b5;color:#062015;font-weight:700;font-size:16px}</style></head>
+<body><div class="w"><h1>Scriptable scripts for SOS</h1>
+<p>Tap Copy, open Scriptable, tap +, paste, then rename the script to the exact name shown.</p>
+<div class="box"><b>1. SOS Widget</b><p>Name it exactly: SOS Widget</p><button data-c="a">Copy SOS Widget</button><pre id="a">// SOS Widget for Scriptable. Name this script exactly: SOS Widget
+// Shows your junk-free streak on the Lock Screen or Home Screen.
+const fm = FileManager.iCloud();
+const path = fm.joinPath(fm.documentsDirectory(), &quot;sos.json&quot;);
+let data = { start: &quot;2026-11-24T20:40:26+05:30&quot;, rate: 420, best: 0 };
+if (fm.fileExists(path)) {
+  try { await fm.downloadFileFromiCloud(path); data = Object.assign(data, JSON.parse(fm.readString(path))); } catch (e) {}
+}
+const ms = Math.max(0, Date.now() - new Date(data.start).getTime());
+const days = Math.floor(ms / 864e5);
+const hours = Math.floor((ms % 864e5) / 36e5);
+const kept = &quot;₹&quot; + Math.floor(ms / 864e5 * (data.rate || 420)).toLocaleString(&quot;en-IN&quot;);
+const mint = new Color(&quot;#7ef0b5&quot;), coral = new Color(&quot;#ff6b57&quot;), ink = new Color(&quot;#eef7f1&quot;), mute = new Color(&quot;#8fb3a2&quot;);
+const fam = config.widgetFamily || &quot;small&quot;;
+const w = new ListWidget();
+w.refreshAfterDate = new Date(Date.now() + 30 * 60 * 1000);
+
+if (fam === &quot;accessoryCircular&quot;) {
+  w.addAccessoryWidgetBackground = true;
+  w.addSpacer();
+  const n = w.addText(String(days)); n.font = Font.boldRoundedSystemFont(22); n.centerAlignText();
+  const l = w.addText(days === 1 ? &quot;day&quot; : &quot;days&quot;); l.font = Font.systemFont(10); l.centerAlignText();
+  w.addSpacer();
+} else if (fam === &quot;accessoryInline&quot;) {
+  w.addText(&quot;SOS · Day &quot; + days + &quot; · &quot; + kept + &quot; kept&quot;);
+} else if (fam === &quot;accessoryRectangular&quot;) {
+  const t = w.addText(&quot;Day &quot; + days + &quot; · Hun nahi&quot;); t.font = Font.boldSystemFont(15);
+  const s = w.addText(hours + &quot;h into today · &quot; + kept + &quot; kept&quot;); s.font = Font.systemFont(12);
+  const b = w.addText(data.best ? &quot;Best: &quot; + data.best + &quot; days&quot; : &quot;Never twice.&quot;); b.font = Font.systemFont(12);
+} else {
+  w.backgroundColor = new Color(&quot;#0a100d&quot;);
+  w.setPadding(14, 14, 14, 14);
+  const lab = w.addText(&quot;Junk-free&quot;); lab.font = Font.mediumSystemFont(12); lab.textColor = mute;
+  const n = w.addText(String(days)); n.font = Font.boldRoundedSystemFont(fam === &quot;small&quot; ? 52 : 60); n.textColor = mint;
+  const d = w.addText(days === 1 ? &quot;day · hun nahi&quot; : &quot;days · hun nahi&quot;); d.font = Font.semiboldSystemFont(13); d.textColor = ink;
+  w.addSpacer();
+  const k = w.addText(kept + &quot; kept&quot;); k.font = Font.boldSystemFont(14); k.textColor = coral;
+}
+
+if (config.runsInWidget) Script.setWidget(w); else await w.presentSmall();
+Script.complete();
+</pre></div>
+<div class="box"><b>2. SOS Sync</b><p>Name it exactly: SOS Sync</p><button data-c="b">Copy SOS Sync</button><pre id="b">// SOS Sync for Scriptable. Name this script exactly: SOS Sync
+// The SOS app opens this with your streak start; it saves it for the widget.
+const q = args.queryParameters || {};
+const fm = FileManager.iCloud();
+const path = fm.joinPath(fm.documentsDirectory(), &quot;sos.json&quot;);
+let data = {};
+if (fm.fileExists(path)) {
+  try { await fm.downloadFileFromiCloud(path); data = JSON.parse(fm.readString(path)); } catch (e) {}
+}
+if (q.start) data.start = q.start;
+if (q.best) data.best = Number(q.best);
+if (q.rate) data.rate = Number(q.rate);
+data.synced = new Date().toISOString();
+fm.writeString(path, JSON.stringify(data));
+const n = new Notification();
+n.title = &quot;SOS widget updated&quot;;
+n.body = &quot;Streak counted from &quot; + new Date(data.start).toLocaleString(&quot;en-IN&quot;) + &quot;. Head back to SOS.&quot;;
+await n.schedule();
+Script.complete();
+</pre></div>
+</div><script>document.querySelectorAll('[data-c]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(document.getElementById(b.dataset.c).textContent);b.textContent='Copied';}catch(e){b.textContent='Select the text and copy it';}});</script></body></html>
