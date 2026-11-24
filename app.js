@@ -354,7 +354,7 @@ function renderYou() {
   renderCal(); renderTriggers(); renderAfter(); renderHours();
   $('#avStatus').textContent = S.avatar ? 'Set. It shows on your story ring.' : 'Shown on your story ring. It stays on this phone.';
   $('#vidStatus').textContent = videoURL ? 'Added. It plays first in every SOS and sits first in your stories. It never leaves this phone.' : 'Not added yet. Save the video from our chat to Photos or Files, then pick it here. It stays on this phone.';
-  $('#syncWidget').href = widgetURL();
+  $('#syncWidget').href = widgetURL(); renderSync();
 }
 function widgetURL() { return 'scriptable:///run/SOS%20Sync?start=' + encodeURIComponent(S.start) + '&best=' + S.best + '&rate=' + D.RATE; }
 $('#copyBackup').onclick = async () => { try { await navigator.clipboard.writeText(JSON.stringify(Object.assign({}, S, {poster:null}))); toast('Backup copied. Paste it into Notes.'); } catch (e) { toast('Copy failed on this phone.'); } };
@@ -486,7 +486,7 @@ $('#realFirst').onclick = () => finish('real');
 $('#ordered').onclick = () => { logUrge('ate'); closeSOS(); slipSheet(); };
 $('#sClose').onclick = closeSOS;
 $('#sosTab').onclick = openSOS;
-function logUrge(outcome) { S.urges.unshift({at:new Date().toISOString(), want:sos.want, hungry:sos.hungry, ratings:sos.ratings || [], outcome}); S.urges = S.urges.slice(0, 1000); save(); }
+function logUrge(outcome) { S.urges.unshift({at:new Date().toISOString(), want:sos.want, hungry:sos.hungry, ratings:sos.ratings || [], outcome}); S.urges = S.urges.slice(0, 1000); save(); queueSync(dkey(new Date())); }
 function finish(outcome) {
   clearInterval(waveT); logUrge(outcome);
   const [tag, head, body] = rewardCard();
@@ -542,7 +542,7 @@ function logSlip(trigger) {
   const now = new Date(), prev = lastSlip();
   const second = prev && now - new Date(prev.at) < DAY;
   const cur = Math.floor(streakMs() / DAY); if (cur > S.best) S.best = cur;
-  S.slips.push({at: now.toISOString(), trigger}); S.start = now.toISOString(); S.celebrated = 0; save(); renderAll();
+  S.slips.push({at: now.toISOString(), trigger}); S.start = now.toISOString(); S.celebrated = 0; save(); queueSync(dkey(now)); renderAll();
   return second;
 }
 function afterSlipSheet(second) {
@@ -572,7 +572,7 @@ function feelHTML() {
 function wireFeel() {
   const box = $('#feel'); if (!box) return; const sel = new Set();
   box.onclick = e => { const b = e.target.closest('[data-f]'); if (!b) return; const f = b.dataset.f; sel.has(f) ? sel.delete(f) : sel.add(f); b.classList.toggle('sel', sel.has(f)); $('#feelSave').disabled = !sel.size; };
-  $('#feelSave').onclick = () => { const p = lastSlip(); if (!p) return; p.after = [...sel]; save(); renderComeback(); toast('Saved. SOS will show you this next time.'); };
+  $('#feelSave').onclick = () => { const p = lastSlip(); if (!p) return; p.after = [...sel]; save(); queueSync(dkey(p.at)); renderComeback(); toast('Saved. SOS will show you this next time.'); };
 }
 function afterCounts() { const c = {}; let n = 0; S.slips.forEach(s => { if (s.after && s.after.length) { n++; s.after.forEach(f => c[f] = (c[f] || 0) + 1); } }); return {n, rows: Object.entries(c).sort((a, b) => b[1] - a[1])}; }
 function recallHTML() {
@@ -634,6 +634,58 @@ $('#shareWeek').onclick = async () => {
   try { if (navigator.share) { await navigator.share({text: t}); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
   try { await navigator.clipboard.writeText(t); toast('Copied. Paste it to your person.'); } catch (e) { toast('Sharing isn’t available here.'); }
 };
+
+/* ---------- send to Mains Run (Google Form → nightly coach) ---------- */
+const syncCfg = () => S.sync && S.sync.form && S.sync.entry ? S.sync : null;
+let syncT = 0;
+function queueSync(day) {
+  if (!syncCfg()) return;
+  S.syncPending = S.syncPending || []; if (!S.syncPending.includes(day)) S.syncPending.push(day); save();
+  clearTimeout(syncT); syncT = setTimeout(flushSync, 4000);
+}
+function snapshot(day) {
+  const lines = ['SOS | ' + day];
+  F.MEALS.forEach(([id, name]) => {
+    const its = dayItems(day).filter(x => x.meal === id); if (!its.length) return;
+    lines.push(name + ': ' + its.map(it => { const f = FOOD[it.id]; return f ? f.name + ' (' + fmtQ(it.q) + f.unit + ')' : ''; }).filter(Boolean).join(', '));
+  });
+  const t = totals(day);
+  if (dayItems(day).length) lines.push(`Total: ${Math.round(t.kcal)} kcal · ${Math.round(t.p)} g protein · ${Math.round(t.c)} g carbs · ${Math.round(t.f)} g fat · ${Math.round(t.fib)} g fibre · ${Math.round(t.na)} mg sodium`);
+  else lines.push('No food logged in SOS.');
+  const w = S.weights.find(x => x.d === day); if (w) lines.push('Weight: ' + w.kg + ' kg');
+  const urges = S.urges.filter(u => dkey(u.at) === day), won = urges.filter(u => u.outcome === 'won' || u.outcome === 'real').length;
+  if (urges.length) lines.push(`Cravings: ${urges.length}, rode out ${won}`);
+  S.slips.filter(x => dkey(x.at) === day).forEach(x => lines.push(`Slip at ${new Date(x.at).toLocaleTimeString('en-IN', {hour:'numeric', minute:'2-digit'})}${x.trigger ? ' (' + x.trigger + ')' : ''}${x.after && x.after.length ? ', 20 min later felt ' + x.after.join(', ').toLowerCase() : ''}`));
+  if (day === dkey(new Date())) lines.push('Junk-free streak so far: ' + dur(streakMs()));
+  return lines.join('\n');
+}
+let syncing = false;
+async function flushSync() {
+  const c = syncCfg(); if (!c || syncing || !(S.syncPending || []).length) return;
+  syncing = true;
+  try {
+    for (const day of [...S.syncPending]) {
+      const body = new URLSearchParams(); body.append(c.entry, snapshot(day));
+      await fetch('https://docs.google.com/forms/d/e/' + c.form + '/formResponse', {method:'POST', mode:'no-cors', body});
+      S.syncPending = S.syncPending.filter(d => d !== day); S.syncLast = new Date().toISOString(); save();
+    }
+  } catch (e) { /* offline: stays pending, retried on next open */ }
+  syncing = false; renderSync();
+}
+function renderSync() {
+  const el = $('#syncStatus'); if (!el) return;
+  el.textContent = syncCfg() ? 'Connected. Everything you log here goes to your Mains Run page every night.' + (S.syncLast ? ' Last sent ' + new Date(S.syncLast).toLocaleString('en-IN', {day:'numeric', month:'short', hour:'numeric', minute:'2-digit'}) + '.' : '') + ((S.syncPending || []).length ? ' Waiting for a connection.' : '')
+    : 'Not connected. Once it is, everything you log here (food, weight, cravings, slips) goes to your Mains Run page every night, with no taps.';
+  $('#syncSave').textContent = syncCfg() ? 'Replace' : 'Save';
+}
+$('#syncSave').onclick = () => {
+  const v = $('#syncIn').value.trim(), m = v.match(/\/forms\/d\/e\/([\w-]+)\//), e = v.match(/(entry\.\d+)=/);
+  if (!m || !e) { toast('That isn’t a pre-filled link. Use ⋮ → Get pre-filled link in the form.'); return; }
+  S.sync = {form: m[1], entry: e[1]}; $('#syncIn').value = '';
+  const today = dkey(new Date()), y = new Date(); y.setDate(y.getDate() - 1);
+  S.syncPending = [dkey(y), today]; save(); flushSync(); renderSync(); toast('Connected. Today’s log is on its way.');
+};
+window.addEventListener('online', flushSync);
 
 /* ---------- celebrations ---------- */
 let confT = 0;
@@ -709,13 +761,13 @@ function renderFood() {
   $('#micros').innerHTML = F.MICROS.map(m => { const v = t[m.k], p = v / m.ref, bad = m.limit && v > m.ref; return `<div class="mi"><span>${m.name}</span>${bar(p, m.limit ? (bad ? '#ff6b57' : '#ffd166') : '#7ef0b5')}<b style="color:${bad ? 'var(--coral)' : 'inherit'}">${Math.round(v).toLocaleString('en-IN')} / ${m.ref.toLocaleString('en-IN')} ${m.unit}</b></div>`; }).join('');
   renderWeight(); renderTargets();
 }
-function addItems(meal, list) { const k = fKey(); S.food[k] = dayItems(k).concat(list.map(([id, q]) => ({meal, id, q}))); save(); renderFood(); renderFoodCard(); }
+function addItems(meal, list) { const k = fKey(); S.food[k] = dayItems(k).concat(list.map(([id, q]) => ({meal, id, q}))); save(); queueSync(k); renderFood(); renderFoodCard(); }
 $('#meals').addEventListener('click', e => {
   const k = fKey(), b = e.target.closest('button'); if (!b) return;
   if (b.dataset.add) addSheet(b.dataset.add);
   else if (b.dataset.tpl) { const tp = F.TEMPLATES.find(x => x.id === b.dataset.tpl); addItems(tp.meal, tp.items); toast(tp.name + ' logged.'); }
   else if (b.dataset.copy) { const n = new Date(); const y = dkey(new Date(n.getFullYear(), n.getMonth(), n.getDate() - fDay - 1)); const src = (S.food[y] || []).filter(x => x.meal === b.dataset.copy); if (!src.length) { toast('Nothing logged for that meal yesterday.'); return; } addItems(b.dataset.copy, src.map(x => [x.id, x.q])); }
-  else if (b.dataset.rm) { S.food[k].splice(+b.dataset.rm, 1); save(); renderFood(); renderFoodCard(); }
+  else if (b.dataset.rm) { S.food[k].splice(+b.dataset.rm, 1); save(); queueSync(k); renderFood(); renderFoodCard(); }
   else if (b.dataset.edit) editSheet(+b.dataset.edit);
 });
 $('#dPrev').onclick = () => { fDay++; renderFood(); };
@@ -759,7 +811,7 @@ function addSheet(meal) {
 function editSheet(i) {
   const k = fKey(), it = S.food[k][i], f = FOOD[it.id];
   sheet(`<div class="q" style="font-size:26px">Change amount</div>${qtyPanel(f, it.q, 'Save')}<button class="btn dim full" id="shClose">Cancel</button>`, () => {
-    bindQty(f, it.q, qq => { it.q = qq; save(); closeSheet(); renderFood(); renderFoodCard(); });
+    bindQty(f, it.q, qq => { it.q = qq; save(); queueSync(k); closeSheet(); renderFood(); renderFoodCard(); });
     $('#shClose').onclick = closeSheet;
   });
 }
@@ -779,7 +831,7 @@ function renderWeight() {
     const v = parseFloat($('#wIn').value); if (!(v > 40 && v < 200)) { toast('Enter your weight in kg, like 93.2'); return; }
     const k = dkey(new Date()); const ex = S.weights.find(x => x.d === k);
     if (ex) ex.kg = v; else S.weights.push({d:k, kg:v});
-    save(); renderFood(); toast('Weight logged.');
+    save(); queueSync(k); renderFood(); toast('Weight logged.');
   };
 }
 function renderTargets() {
@@ -890,6 +942,7 @@ renderAll();
 loadVideo();
 loadMusic();
 setInterval(tick, 1000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) renderAll(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderAll(); flushSync(); } else if ((S.syncPending || []).length) { clearTimeout(syncT); flushSync(); } });
+setTimeout(flushSync, 2500);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 }
