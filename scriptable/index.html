@@ -9,45 +9,106 @@ button{min-height:48px;padding:0 18px;border:0;border-radius:12px;background:#7e
 <body><div class="w"><h1>Scriptable scripts for SOS</h1>
 <p>Tap Copy, open Scriptable, tap +, paste, then rename the script to the exact name shown.</p>
 <div class="box"><b>1. SOS Widget</b><p>Name it exactly: SOS Widget</p><button data-c="a">Copy SOS Widget</button><pre id="a">// SOS Widget for Scriptable. Name this script exactly: SOS Widget
-// Shows your junk-free streak on the Lock Screen or Home Screen.
+// Home Screen (small or medium) and Lock Screen widget for your junk-free streak.
 const fm = FileManager.iCloud();
 const path = fm.joinPath(fm.documentsDirectory(), &quot;sos.json&quot;);
 let data = { start: &quot;2026-11-24T20:40:26+05:30&quot;, rate: 420, best: 0 };
 if (fm.fileExists(path)) {
   try { await fm.downloadFileFromiCloud(path); data = Object.assign(data, JSON.parse(fm.readString(path))); } catch (e) {}
 }
+
+const DAY = 864e5, HR = 36e5;
+const MILES = [
+  [0, &quot;Hour 0&quot;, &quot;Arteries get a break&quot;], [24, &quot;Day 1&quot;, &quot;Salt bloat starts to drain&quot;],
+  [72, &quot;Day 3&quot;, &quot;Gut bacteria are changing&quot;], [168, &quot;Day 7&quot;, &quot;The habit loses its grip&quot;],
+  [336, &quot;Day 14&quot;, &quot;Eating less without trying&quot;], [720, &quot;Day 30&quot;, &quot;Liver fat within reach&quot;],
+  [1440, &quot;Day 60&quot;, &quot;Your taste resets&quot;], [2160, &quot;Day 90&quot;, &quot;Mind and hormones&quot;],
+  [4320, &quot;Day 180&quot;, &quot;Half a year free&quot;], [8760, &quot;Day 365&quot;, &quot;One year free&quot;]
+];
 const ms = Math.max(0, Date.now() - new Date(data.start).getTime());
-const days = Math.floor(ms / 864e5);
-const hours = Math.floor((ms % 864e5) / 36e5);
-const kept = &quot;₹&quot; + Math.floor(ms / 864e5 * (data.rate || 420)).toLocaleString(&quot;en-IN&quot;);
-const mint = new Color(&quot;#7ef0b5&quot;), coral = new Color(&quot;#ff6b57&quot;), ink = new Color(&quot;#eef7f1&quot;), mute = new Color(&quot;#8fb3a2&quot;);
-const fam = config.widgetFamily || &quot;small&quot;;
+const days = Math.floor(ms / DAY);
+const hrs = Math.floor((ms % DAY) / HR), mins = Math.floor((ms % HR) / 6e4);
+const kept = &quot;₹&quot; + Math.floor(ms / DAY * (data.rate || 420)).toLocaleString(&quot;en-IN&quot;);
+const nextI = MILES.findIndex(m =&gt; ms &lt; m[0] * HR);
+const next = nextI &gt;= 0 ? MILES[nextI] : null;
+const prevH = nextI &gt; 0 ? MILES[nextI - 1][0] : 0;
+const pct = next ? Math.min(1, (ms / HR - prevH) / (next[0] - prevH)) : 1;
+const left = next ? next[0] * HR - ms : 0;
+const fmtLeft = t =&gt; { const d = Math.floor(t / DAY), h = Math.floor((t % DAY) / HR), m = Math.floor((t % HR) / 6e4); return d ? d + &quot;d &quot; + h + &quot;h&quot; : h ? h + &quot;h &quot; + m + &quot;m&quot; : m + &quot;m&quot;; };
+const clean = days ? days + &quot;d &quot; + hrs + &quot;h clean&quot; : hrs + &quot;h &quot; + mins + &quot;m clean&quot;;
+
+const C = {
+  mint: new Color(&quot;#7ef0b5&quot;), track: new Color(&quot;#7ef0b5&quot;, 0.18), coral: new Color(&quot;#ff8a75&quot;),
+  ink: new Color(&quot;#eef7f1&quot;), mute: new Color(&quot;#8fb3a2&quot;), top: new Color(&quot;#173a2b&quot;), bottom: new Color(&quot;#081009&quot;)
+};
+
+function ring(size, p, lw, fg, bg, big, small, bigColor, smallColor) {
+  const dc = new DrawContext();
+  dc.size = new Size(size, size); dc.opaque = false; dc.respectScreenScale = true;
+  const r = (size - lw) / 2, c = size / 2;
+  dc.setStrokeColor(bg); dc.setLineWidth(lw);
+  dc.strokeEllipse(new Rect(lw / 2, lw / 2, size - lw, size - lw));
+  const q = Math.max(0.001, p), steps = Math.max(2, Math.ceil(180 * q));
+  const pt = i =&gt; { const a = -Math.PI / 2 + 2 * Math.PI * q * i / steps; return new Point(c + r * Math.cos(a), c + r * Math.sin(a)); };
+  const path = new Path(); path.move(pt(0));
+  for (let i = 1; i &lt;= steps; i++) path.addLine(pt(i));
+  dc.addPath(path); dc.setStrokeColor(fg); dc.setLineWidth(lw); dc.strokePath();
+  dc.setFillColor(fg);
+  [pt(0), pt(steps)].forEach(e =&gt; dc.fillEllipse(new Rect(e.x - lw / 2, e.y - lw / 2, lw, lw)));
+  dc.setTextAlignedCenter();
+  dc.setFont(Font.boldRoundedSystemFont(size * 0.34)); dc.setTextColor(bigColor);
+  dc.drawTextInRect(big, new Rect(0, size * 0.26, size, size * 0.42));
+  dc.setFont(Font.mediumSystemFont(size * 0.11)); dc.setTextColor(smallColor);
+  dc.drawTextInRect(small, new Rect(0, size * 0.62, size, size * 0.16));
+  return dc.getImage();
+}
+function text(stack, s, font, color, lines) { const t = stack.addText(s); t.font = font; t.textColor = color; if (lines) t.lineLimit = lines; t.minimumScaleFactor = 0.7; return t; }
+
+const fam = config.widgetFamily || &quot;medium&quot;;
 const w = new ListWidget();
 w.refreshAfterDate = new Date(Date.now() + 30 * 60 * 1000);
+const dayWord = days === 1 ? &quot;day&quot; : &quot;days&quot;;
 
 if (fam === &quot;accessoryCircular&quot;) {
   w.addAccessoryWidgetBackground = true;
-  w.addSpacer();
-  const n = w.addText(String(days)); n.font = Font.boldRoundedSystemFont(22); n.centerAlignText();
-  const l = w.addText(days === 1 ? &quot;day&quot; : &quot;days&quot;); l.font = Font.systemFont(10); l.centerAlignText();
-  w.addSpacer();
+  const img = w.addImage(ring(60, pct, 5, Color.white(), new Color(&quot;#ffffff&quot;, 0.25), String(days), dayWord, Color.white(), Color.white()));
+  img.centerAlignImage();
 } else if (fam === &quot;accessoryInline&quot;) {
-  w.addText(&quot;SOS · Day &quot; + days + &quot; · &quot; + kept + &quot; kept&quot;);
+  w.addText(&quot;Day &quot; + days + &quot; · &quot; + clean + &quot; · &quot; + kept);
 } else if (fam === &quot;accessoryRectangular&quot;) {
-  const t = w.addText(&quot;Day &quot; + days + &quot; · Hun nahi&quot;); t.font = Font.boldSystemFont(15);
-  const s = w.addText(hours + &quot;h into today · &quot; + kept + &quot; kept&quot;); s.font = Font.systemFont(12);
-  const b = w.addText(data.best ? &quot;Best: &quot; + data.best + &quot; days&quot; : &quot;Never twice.&quot;); b.font = Font.systemFont(12);
+  text(w, &quot;Day &quot; + days + &quot; · Hun nahi&quot;, Font.boldSystemFont(15), Color.white(), 1);
+  text(w, clean + &quot; · &quot; + kept + &quot; kept&quot;, Font.systemFont(12), Color.white(), 1);
+  text(w, next ? next[1] + &quot; in &quot; + fmtLeft(left) : &quot;Every milestone unlocked&quot;, Font.systemFont(12), Color.white(), 1);
 } else {
-  w.backgroundColor = new Color(&quot;#0a100d&quot;);
-  w.setPadding(14, 14, 14, 14);
-  const lab = w.addText(&quot;Junk-free&quot;); lab.font = Font.mediumSystemFont(12); lab.textColor = mute;
-  const n = w.addText(String(days)); n.font = Font.boldRoundedSystemFont(fam === &quot;small&quot; ? 52 : 60); n.textColor = mint;
-  const d = w.addText(days === 1 ? &quot;day · hun nahi&quot; : &quot;days · hun nahi&quot;); d.font = Font.semiboldSystemFont(13); d.textColor = ink;
-  w.addSpacer();
-  const k = w.addText(kept + &quot; kept&quot;); k.font = Font.boldSystemFont(14); k.textColor = coral;
+  const g = new LinearGradient();
+  g.colors = [C.top, C.bottom]; g.locations = [0, 1];
+  g.startPoint = new Point(0, 0); g.endPoint = new Point(1, 1);
+  w.backgroundGradient = g;
+  if (fam === &quot;small&quot;) {
+    w.setPadding(12, 12, 12, 12);
+    const top = w.addStack(); top.addSpacer();
+    top.addImage(ring(96, pct, 9, C.mint, C.track, String(days), dayWord, C.ink, C.mute)).imageSize = new Size(96, 96);
+    top.addSpacer();
+    w.addSpacer(6);
+    const b = w.addStack(); b.addSpacer(); text(b, kept + &quot; kept&quot;, Font.boldSystemFont(13), C.coral, 1); b.addSpacer();
+  } else {
+    w.setPadding(14, 16, 14, 16);
+    const row = w.addStack(); row.layoutHorizontally(); row.centerAlignContent();
+    row.addImage(ring(122, pct, 11, C.mint, C.track, String(days), dayWord, C.ink, C.mute)).imageSize = new Size(122, 122);
+    row.addSpacer(16);
+    const col = row.addStack(); col.layoutVertically();
+    text(col, &quot;Junk-free · hun nahi&quot;, Font.semiboldSystemFont(13), C.mute, 1);
+    col.addSpacer(6);
+    text(col, next ? &quot;Next: &quot; + next[1] : &quot;All unlocked&quot;, Font.semiboldSystemFont(13), C.mint, 1);
+    text(col, next ? next[2] : &quot;One year free&quot;, Font.boldSystemFont(17), C.ink, 2);
+    text(col, next ? &quot;in &quot; + fmtLeft(left) : &quot;&quot;, Font.mediumSystemFont(13), C.mute, 1);
+    col.addSpacer();
+    text(col, kept + &quot; kept · &quot; + clean, Font.boldSystemFont(13), C.coral, 1);
+    row.addSpacer();
+  }
 }
 
-if (config.runsInWidget) Script.setWidget(w); else await w.presentSmall();
+if (config.runsInWidget) Script.setWidget(w); else await w.presentMedium();
 Script.complete();
 </pre></div>
 <div class="box"><b>2. SOS Sync</b><p>Name it exactly: SOS Sync</p><button data-c="b">Copy SOS Sync</button><pre id="b">// SOS Sync for Scriptable. Name this script exactly: SOS Sync
