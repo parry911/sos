@@ -420,3 +420,12 @@ textarea{width:100%;min-height:90px;background:#0a100d;color:var(--ink);border:1
 .minifeed .reelsc .sc-in{padding:0 70px 26px 18px}
 .minifeed .mq div{font-size:56px}
 @media(prefers-reduced-motion:reduce){.halo,.rings i,.hart,.mq div{animation:none}}
+
+/* v5: fund, aftermath, recall */
+.fbar{display:block;height:6px;border-radius:3px;background:#0a100d;margin-top:8px;overflow:hidden}
+.fbar i{display:block;height:100%;border-radius:3px;background:var(--mint)}
+.aft{border-color:var(--coral)}
+.recall{margin:12px 0 4px;border-radius:16px;background:var(--coral2);border:1px solid var(--coral);padding:12px 14px}
+.recall small{display:block;color:#ffc4b8;font-size:13px}
+.recall b{display:block;font:700 19px/1.25 'Space Grotesk',sans-serif;margin-top:2px}
+details.set li b,details.set li code{display:inline}

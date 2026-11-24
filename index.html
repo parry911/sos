@@ -39,6 +39,7 @@
     <div class="tile"><span>Waves won</span><b class="num" id="tWaves">0</b></div>
     <div class="tile"><span>Kept</span><b class="num" id="tKept">₹0</b></div>
   </div>
+  <div id="fundCard"></div>
   <button class="card" id="foodCard"></button>
   <div id="weekCard"></div>
   <button class="card" id="openKitchen">
@@ -95,8 +96,12 @@
     <span><b>Your week, wrapped</b><span>Waves, triggers, peak hours, money kept</span></span>
     <svg class="go" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8fb3a2" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
   </button>
+  <button class="btn dim full" id="shareWeek" style="margin-top:10px">Send my week to someone</button>
+  <p class="mute tiny" style="margin:6px 2px 0">Pick one person who keeps you honest. Send it every Sunday, slips included.</p>
   <h2>What sets you off</h2>
   <div id="trigBars" class="bars"></div>
+  <h2>How slips leave you</h2>
+  <div id="afterBars" class="bars"></div>
   <h2>When cravings hit</h2>
   <div id="hours"></div>
   <button class="btn dim full" id="slipBtn" style="margin-top:22px">I slipped</button>
@@ -133,8 +138,9 @@
   <details class="set"><summary>Night alert (once)</summary><ol>
     <li>Open <b>Shortcuts</b> → Automation → + → <b>Time of Day</b>.</li>
     <li>Set <b>9:00 PM</b>, Daily, and choose <b>Run Immediately</b>.</li>
-    <li>Add the action <b>Show Notification</b> with: <code>Danger window opens. Dinner done? If a craving hits, open SOS first.</code></li>
-    <li>Optional: make a second one at <b>11:30 PM</b> with <code>This is when you order. Not tonight.</code></li>
+    <li>Add the action <b>Show Notification</b> with: <code>A third of your orders came after 10 PM. Craving? Open SOS before any app.</code></li>
+    <li>Make a second one at <b>11:30 PM</b>: <code>This is the hour you order. Once, a payment failed and you ordered again 2 minutes later. Not tonight.</code></li>
+    <li>Close the day: a third one at the time you usually wind down, with <code>Kirtan Sohila. The day is done, and so is the kitchen.</code> Add <b>Open URLs</b> with your favourite Kirtan Sohila recording if you want it to start playing.</li>
   </ol></details>
   <div class="set">
     <b>Backup</b>
@@ -198,6 +204,7 @@
 
   <div class="step" id="s-advice"><div class="in">
     <div class="q">Then eat a real meal first.</div>
+    <div id="recall"></div>
     <div id="dish3"></div>
     <p>Most cravings don’t survive a full stomach. If you still order after a proper meal, eat it slowly at a table with your phone down. Notice what it tastes like after the fifth bite, and how you feel 20 minutes later.</p>
     <p><b>One slip is a mistake. Two in a row is the habit.</b> Your next meal is real food, and no skipping meals to make up for it.</p>

@@ -32,6 +32,7 @@ if (S.celebrated < 0) { S.celebrated = reachedCount() - 1; save(); }
 if (!S.weights) { S.weights = [{d:'2026-11-25', kg:93.25}]; save(); }
 if (!S.food) { S.food = {}; save(); }
 if (!S.prof) { S.prof = {h:184, age:null, act:1.375, def:500}; save(); }
+if (!S.origin) { S.origin = S.slips.reduce((a, x) => new Date(x.at) < new Date(a) ? x.at : a, S.start); save(); }
 const curWeight = () => S.weights.length ? S.weights[S.weights.length-1].kg : 93.25;
 const fill = s => String(s).replace('{liver}', (curWeight()*0.03).toFixed(1) + ' to ' + (curWeight()*0.05).toFixed(1) + ' kg');
 
@@ -350,7 +351,7 @@ function renderHours() {
   $('#hours').innerHTML = '<div class="hours">' + c.map((v, h) => `<i title="${fmtHour(h)}: ${v}" style="height:${v ? Math.max(6, v/max*100) : 2}%;opacity:${v?1:.25}"></i>`).join('') + '</div><div class="hlab"><span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>11 PM</span></div>';
 }
 function renderYou() {
-  renderCal(); renderTriggers(); renderHours();
+  renderCal(); renderTriggers(); renderAfter(); renderHours();
   $('#avStatus').textContent = S.avatar ? 'Set. It shows on your story ring.' : 'Shown on your story ring. It stays on this phone.';
   $('#vidStatus').textContent = videoURL ? 'Added. It plays first in every SOS and sits first in your stories. It never leaves this phone.' : 'Not added yet. Save the video from our chat to Photos or Files, then pick it here. It stays on this phone.';
   $('#syncWidget').href = widgetURL();
@@ -410,7 +411,7 @@ function openSOS() {
   sos = {want:null, hungry:null, ratings:[], t0:0, last:0};
   $('#sos').classList.remove('hide'); $('#sProg').style.width = '0';
   $('#craves').innerHTML = D.KITCHEN.map(k => `<button class="crave" data-w="${k.id}"><span class="ic" style="background:${k.color}">${ART[k.art]().replace('<svg', '<svg width="30" height="30"')}</span><b>${k.craving}</b></button>`).join('');
-  $('#dish1').innerHTML = ''; $('#ask').classList.add('hide');
+  $('#dish1').innerHTML = ''; $('#ask').classList.add('hide'); $('#recall').innerHTML = recallHTML();
   if (videoURL) {
     step('video');
     sv.src = videoURL; sv.muted = false; sv.currentTime = 0;
@@ -546,7 +547,7 @@ function logSlip(trigger) {
 }
 function afterSlipSheet(second) {
   sheet(`<div class="q">${second ? 'Two in a row. Stop it here.' : 'Logged. Never twice.'}</div>
-    <p>${second ? 'This is the moment the habit wins or loses. Your next meal is real food, at the table, and no skipping meals to make up for it.' : 'One slip is a mistake. Your next meal is real food, and no skipping meals to make up for it. Comeback mode is on for 24 hours.'}</p>
+    <p>${second ? 'This is the moment the habit wins or loses. Your next meal is real food, at the table, and no skipping meals to make up for it.' : 'One slip is a mistake. Your next meal is real food, and no skipping meals to make up for it. Comeback mode is on for 24 hours.'} In 20 minutes, notice how your body feels. The Body screen will ask.</p>
     <a class="btn dim full" href="${widgetURL()}" style="display:grid;place-items:center;text-decoration:none">Update lock-screen widget</a>
     <button class="btn mint full" id="shClose">Back to your body</button>`, () => { $('#shClose').onclick = () => { closeSheet(); switchTab('body'); }; });
 }
@@ -555,12 +556,84 @@ function renderComeback() {
   const p = lastSlip(); const el = $('#comeback');
   if (!p) { el.innerHTML = ''; return; }
   const left = DAY - (Date.now() - new Date(p.at));
-  if (left > 0) el.innerHTML = `<div class="banner"><div><b>Comeback mode</b><span>Make it one slip, not two.</span></div><span class="num" id="cbLeft">${dur(left)}</span></div>`;
+  if (left > 0) { el.innerHTML = `<div class="banner"><div><b>Comeback mode</b><span>Make it one slip, not two.</span></div><span class="num" id="cbLeft">${dur(left)}</span></div>` + (needsFeel(p) ? feelHTML() : ''); wireFeel(); }
   else {
     el.innerHTML = '';
     if (S.comebackDone !== p.at) { S.comebackDone = p.at; save(); celebrate('Comeback complete', 'Never twice.', 'A full day since the slip and no second order. That is how the habit loses.'); }
   }
 }
+
+/* ---------- 20 minutes after a slip ---------- */
+const FEELS = ['Heavy', 'Bloated', 'Sleepy', 'Guilty', 'Thirsty', 'Foggy', 'Fine'];
+const needsFeel = p => p && !p.after && Date.now() - new Date(p.at) >= 20*MIN && Date.now() - new Date(p.at) < 12*HR;
+function feelHTML() {
+  return `<div class="set aft"><b>20 minutes on. How do you feel?</b><p>Pick all that are true. Next time a craving hits, SOS shows you this.</p><div class="chips" id="feel">${FEELS.map(f => `<button data-f="${f}">${f}</button>`).join('')}</div><button class="btn mint full" id="feelSave" disabled style="margin-top:12px">Save</button></div>`;
+}
+function wireFeel() {
+  const box = $('#feel'); if (!box) return; const sel = new Set();
+  box.onclick = e => { const b = e.target.closest('[data-f]'); if (!b) return; const f = b.dataset.f; sel.has(f) ? sel.delete(f) : sel.add(f); b.classList.toggle('sel', sel.has(f)); $('#feelSave').disabled = !sel.size; };
+  $('#feelSave').onclick = () => { const p = lastSlip(); if (!p) return; p.after = [...sel]; save(); renderComeback(); toast('Saved. SOS will show you this next time.'); };
+}
+function afterCounts() { const c = {}; let n = 0; S.slips.forEach(s => { if (s.after && s.after.length) { n++; s.after.forEach(f => c[f] = (c[f] || 0) + 1); } }); return {n, rows: Object.entries(c).sort((a, b) => b[1] - a[1])}; }
+function recallHTML() {
+  const {n, rows} = afterCounts(); if (!n) return '';
+  return `<div class="recall"><small>${n === 1 ? 'Last time you ate it' : 'The last ' + n + ' times you ate it'}, 20 minutes later you felt</small><b>${rows.slice(0, 3).map(([f, v]) => f.toLowerCase() + (n > 1 ? ' (' + v + ')' : '')).join(', ')}.</b></div>`;
+}
+function renderAfter() {
+  const {rows} = afterCounts(); const max = rows.length ? rows[0][1] : 1;
+  $('#afterBars').innerHTML = rows.length ? rows.map(([k, v]) => `<div class="bar"><span>${esc(k)}</span><div><i style="width:${v/max*100}%"></i></div><b>${v}</b></div>`).join('') : '<p class="mute" style="margin:0;font-size:14px">20 minutes after a slip, the Body screen asks how you feel. The answers collect here, and SOS shows them to you the next time a craving hits.</p>';
+}
+
+/* ---------- freedom fund ---------- */
+const GO = '<svg class="go" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8fb3a2" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+function fundKept() { const o = new Date(S.origin), n = S.slips.filter(x => new Date(x.at) >= o).length; return Math.max(0, (Date.now() - o) / DAY * D.RATE - n * D.RATE); }
+function renderFund() {
+  const g = S.fund, k = fundKept(), el = $('#fundCard'); if (!el) return;
+  const ic = `<span class="ic" style="background:#3a2a10">${ART.rupee().replace('<svg', '<svg width="28" height="28"')}</span>`;
+  if (!g) el.innerHTML = `<button class="card" id="fundBtn">${ic}<span><b>Freedom fund · <span class="num" id="fundAmt" style="display:inline;color:inherit;font-size:inherit">${rupees(k)}</span></b><span>Pick what the money you don’t spend will buy</span></span>${GO}</button>`;
+  else {
+    const done = k >= g.price, left = Math.max(1, Math.ceil((g.price - k) / D.RATE));
+    el.innerHTML = `<button class="card" id="fundBtn">${ic}<span style="flex:1;min-width:0"><b>${done ? 'Earned: ' : ''}${esc(g.name)}</b><span>${done ? 'Paid for by orders you didn’t place. Buy it.' : `<span class="num" id="fundAmt" style="display:inline;color:inherit;font-size:inherit">${rupees(k)}</span> of ${rupees(g.price)} · ${left} clean ${left === 1 ? 'day' : 'days'} to go`}</span><i class="fbar"><i style="width:${Math.min(100, k / g.price * 100)}%"></i></i></span></button>`;
+    if (done && S.fundDone !== g.name + g.price) { S.fundDone = g.name + g.price; save(); celebrate('Freedom fund', 'You earned it.', g.name + ', paid for by every order you didn’t place.'); }
+  }
+  $('#fundBtn').onclick = fundSheet;
+}
+function fundSheet() {
+  const g = S.fund || {name:'', price:''};
+  sheet(`<div class="q">Freedom fund</div>
+    <p>Every clean day adds ${rupees(D.RATE)}, what you spent a day on delivery in November. Every slip takes a day’s worth back out. So far: <b>${rupees(fundKept())}</b>.</p>
+    <p>Pick something you actually want. Each Sunday, move that week’s amount into a separate account so the money is real.</p>
+    <div class="frm" style="grid-template-columns:1fr"><label>What it buys<input id="fName" maxlength="40" placeholder="e.g. new running shoes" value="${esc(g.name)}"></label><label>Price (₹)<input id="fPrice" type="number" inputmode="numeric" min="100" placeholder="e.g. 12000" value="${g.price || ''}"></label></div>
+    <div class="two" style="margin-top:16px"><button class="btn dim" id="fOff">${S.fund ? 'Remove goal' : 'Cancel'}</button><button class="btn mint" id="fSave">Save</button></div>`, () => {
+      $('#fOff').onclick = () => { if (S.fund) { S.fund = null; save(); renderFund(); } closeSheet(); };
+      $('#fSave').onclick = () => {
+        const name = $('#fName').value.trim(), price = parseInt($('#fPrice').value, 10);
+        if (!name || !(price >= 100)) { toast('Add what it buys and a price of at least ₹100.'); return; }
+        S.fund = {name, price}; save(); closeSheet(); renderFund();
+      };
+    });
+}
+
+/* ---------- witness ---------- */
+function weekText() {
+  const now = new Date(), from = Date.now() - 7*DAY, bad = slipDays();
+  let clean = 0, tracked = 0;
+  for (let i = 1; i <= 7; i++) { const k = dkey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)); if (k >= D.TRACK0) { tracked++; if (!bad.has(k)) clean++; } }
+  const urges = S.urges.filter(u => new Date(u.at) >= from), won = urges.filter(u => u.outcome === 'won' || u.outcome === 'real').length;
+  const slips = S.slips.filter(s => new Date(s.at) >= from).length, d = Math.floor(streakMs() / DAY);
+  const lines = ['My junk-food week:'];
+  if (tracked) lines.push(`• ${clean} of the last ${tracked} ${tracked === 1 ? 'day' : 'days'} with no junk`);
+  lines.push(`• ${slips} ${slips === 1 ? 'slip' : 'slips'}`);
+  if (urges.length) lines.push(`• ${won} of ${urges.length} ${urges.length === 1 ? 'craving' : 'cravings'} ridden out`);
+  lines.push(`• ${rupees(fundKept())} not spent on delivery so far`);
+  lines.push(`Current streak: ${d} ${d === 1 ? 'day' : 'days'}. Ask me about it.`);
+  return lines.join('\n');
+}
+$('#shareWeek').onclick = async () => {
+  const t = weekText();
+  try { if (navigator.share) { await navigator.share({text: t}); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(t); toast('Copied. Paste it to your person.'); } catch (e) { toast('Sharing isn’t available here.'); }
+};
 
 /* ---------- celebrations ---------- */
 let confT = 0;
@@ -782,6 +855,8 @@ function tick() {
   $('#tDays').textContent = d + (d === 1 ? ' day' : ' days'); $('#tWaves').textContent = wavesWon(); $('#tKept').textContent = rupees(ms / DAY * D.RATE);
   $$('[data-cd]').forEach(el => el.textContent = dur(+el.dataset.cd * HR - ms));
   const cb = $('#cbLeft'); if (cb) { const p = lastSlip(); const left = DAY - (Date.now() - new Date(p.at)); if (left <= 0) renderComeback(); else cb.textContent = dur(left); }
+  { const p = lastSlip(); if (needsFeel(p) && !$('#feel')) renderComeback(); }
+  const fa = $('#fundAmt'); if (fa) fa.textContent = rupees(fundKept());
   checkMilestones();
 }
 
@@ -805,7 +880,7 @@ function renderMotto() {
   $('#mT').textContent = h.t; $('#mS').textContent = h.d; $('#mSrc').textContent = h.s;
 }
 $('#hard').onclick = () => { hardI = (hardI === null ? 0 : hardI) + 1; renderMotto(); };
-function renderAll() { renderMotto(); renderFoodCard(); if ($('#food').classList.contains('on')) renderFood(); renderStoryRow(); renderComeback(); renderBodyMap(); renderWeekCard(); tick(); if ($('#you').classList.contains('on')) renderYou(); if ($('#stories').classList.contains('on')) renderStoryList(); }
+function renderAll() { renderMotto(); renderFoodCard(); if ($('#food').classList.contains('on')) renderFood(); renderStoryRow(); renderComeback(); renderFund(); renderBodyMap(); renderWeekCard(); tick(); if ($('#you').classList.contains('on')) renderYou(); if ($('#stories').classList.contains('on')) renderStoryList(); }
 
 /* ---------- start ---------- */
 if (!standalone() && !S.gateSkipped) $('#gate').classList.remove('hide');
