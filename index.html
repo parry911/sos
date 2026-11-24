@@ -108,6 +108,18 @@
 
   <h2>Setup</h2>
   <div class="set">
+    <b>Send food to Mains Run</b>
+    <p id="syncStatus">Not connected. Once it is, everything you log here (food, weight, cravings, slips) goes to your Mains Run page every night, with no taps.</p>
+    <div class="row"><input id="syncIn" type="url" inputmode="url" autocomplete="off" placeholder="Paste the Google Form pre-filled link" aria-label="Google Form pre-filled link" style="flex:1;min-width:0;min-height:44px;border-radius:12px;border:1px solid var(--line2);background:#0a100d;color:var(--ink);padding:0 12px;font:16px Inter,sans-serif"><button class="btn mint" id="syncSave">Save</button></div>
+  </div>
+  <details class="set"><summary>Connect Mains Run (once)</summary><ol>
+    <li>On your Mac or phone, open <code>forms.new</code>. Name the form <b>SOS food log</b>.</li>
+    <li>Change the first question’s type to <b>Paragraph</b> and call it <b>entry</b>.</li>
+    <li>Open the <b>Responses</b> tab → <b>Link to Sheets</b> → <b>Create a new spreadsheet</b> → Create. Keep its name, <b>SOS food log (Responses)</b>.</li>
+    <li>Tap <b>⋮</b> (top right) → <b>Get pre-filled link</b>, type <b>x</b> in the answer, tap <b>Get link</b> → <b>Copy link</b>.</li>
+    <li>Paste it above and tap <b>Save</b>. The link stays on this phone only.</li>
+  </ol></details>
+  <div class="set">
     <b>Your SOS video</b>
     <p id="vidStatus">Not added yet. Save the video from our chat to Photos or Files, then pick it here. It stays on this phone.</p>
     <div class="row"><label class="btn mint" for="vidFile" style="display:inline-grid;place-items:center">Choose video</label><input type="file" id="vidFile" accept="video/*" class="hide"></div>
@@ -123,18 +135,6 @@
     <div id="musicList"></div>
     <div class="row" style="margin-top:8px"><label class="btn dim" for="musFile" style="display:inline-grid;place-items:center">Add songs</label><input type="file" id="musFile" accept="audio/*" multiple class="hide"><label style="display:flex;align-items:center;gap:8px;font-size:14px;min-height:44px"><input type="checkbox" id="musUse" style="width:20px;height:20px"> Use my songs</label></div>
   </div>
-  <div class="set">
-    <b>Send food to Mains Run</b>
-    <p id="syncStatus">Not connected. Once it is, everything you log here (food, weight, cravings, slips) goes to your Mains Run page every night, with no taps.</p>
-    <div class="row"><input id="syncIn" type="url" inputmode="url" autocomplete="off" placeholder="Paste the Google Form pre-filled link" aria-label="Google Form pre-filled link" style="flex:1;min-width:0;min-height:44px;border-radius:12px;border:1px solid var(--line2);background:#0a100d;color:var(--ink);padding:0 12px;font:16px Inter,sans-serif"><button class="btn mint" id="syncSave">Save</button></div>
-  </div>
-  <details class="set"><summary>Connect Mains Run (once)</summary><ol>
-    <li>On your Mac or phone, open <code>forms.new</code>. Name the form <b>SOS food log</b>.</li>
-    <li>Change the first question’s type to <b>Paragraph</b> and call it <b>entry</b>.</li>
-    <li>Open the <b>Responses</b> tab → <b>Link to Sheets</b> → <b>Create a new spreadsheet</b> → Create. Keep its name, <b>SOS food log (Responses)</b>.</li>
-    <li>Tap <b>⋮</b> (top right) → <b>Get pre-filled link</b>, type <b>x</b> in the answer, tap <b>Get link</b> → <b>Copy link</b>.</li>
-    <li>Paste it above and tap <b>Save</b>. The link stays on this phone only.</li>
-  </ol></details>
   <div class="set">
     <b>Lock-screen widget</b>
     <p>Sends your current streak start to the Scriptable widget. Do it after you log a slip.</p>

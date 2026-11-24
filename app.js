@@ -644,6 +644,7 @@ function queueSync(day) {
   clearTimeout(syncT); syncT = setTimeout(flushSync, 4000);
 }
 function snapshot(day) {
+  if (!dayItems(day).length && !S.weights.some(x => x.d === day) && !S.urges.some(u => dkey(u.at) === day) && !S.slips.some(x => dkey(x.at) === day)) return null;
   const lines = ['SOS | ' + day];
   F.MEALS.forEach(([id, name]) => {
     const its = dayItems(day).filter(x => x.meal === id); if (!its.length) return;
@@ -665,8 +666,9 @@ async function flushSync() {
   syncing = true;
   try {
     for (const day of [...S.syncPending]) {
-      const body = new URLSearchParams(); body.append(c.entry, snapshot(day));
-      await fetch('https://docs.google.com/forms/d/e/' + c.form + '/formResponse', {method:'POST', mode:'no-cors', body});
+      const text = day === 'ping' ? 'SOS connected ' + new Date().toISOString() : snapshot(day);
+      if (text) { const body = new URLSearchParams(); body.append(c.entry, text);
+      await fetch('https://docs.google.com/forms/d/e/' + c.form + '/formResponse', {method:'POST', mode:'no-cors', body}); }
       S.syncPending = S.syncPending.filter(d => d !== day); S.syncLast = new Date().toISOString(); save();
     }
   } catch (e) { /* offline: stays pending, retried on next open */ }
@@ -683,7 +685,7 @@ $('#syncSave').onclick = () => {
   if (!m || !e) { toast('That isn’t a pre-filled link. Use ⋮ → Get pre-filled link in the form.'); return; }
   S.sync = {form: m[1], entry: e[1]}; $('#syncIn').value = '';
   const today = dkey(new Date()), y = new Date(); y.setDate(y.getDate() - 1);
-  S.syncPending = [dkey(y), today]; save(); flushSync(); renderSync(); toast('Connected. Today’s log is on its way.');
+  S.syncPending = ['ping', dkey(y), today]; save(); flushSync(); renderSync(); toast('Connected. A test row is on its way to your sheet.');
 };
 window.addEventListener('online', flushSync);
 
