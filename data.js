@@ -120,7 +120,21 @@ window.SOS_DATA = (() => {
     {id:'sauce', craving:'Sauces & ketchup', name:'Tamatar chutney', mins:20, color:'#8a1a12', art:'jar', steps:['Cook four chopped tomatoes with garlic and red chilli for 15 minutes.','Add a splash of vinegar, a little jaggery and salt, then blend.','Keeps five days in the fridge. Use it on real food.']}
   ];
 
+  // One line a day, the same one the widget shows.
+  const MOTTOS = [
+    {t:'Man jeetai jag jeet.', sub:'Conquer the mind and you conquer the world. Japji Sahib'},
+    {t:'Every clean hour is repair.', sub:'Your body is fixing something right now.'},
+    {t:'The craving passes. You stay.', sub:'It peaks and falls within minutes if you don’t feed it.'},
+    {t:'Stronger than the craving.', sub:'You’ve already beaten it before. Do it once more.'},
+    {t:'Feed the body you’re building.', sub:'Protein, real food, and nothing from a delivery bag.'},
+    {t:'One more clean day.', sub:'Not forever. Just today.'},
+    {t:'Real food. Real strength.', sub:'Every home meal is a rep for your discipline.'},
+    {t:'Your future self is watching.', sub:'Make him proud of tonight.'},
+    {t:'Small wins, every night.', sub:'The habit dies one skipped order at a time.'},
+    {t:'Discipline is remembering what you want.', sub:'What you want most beats what you want now.'}
+  ];
+
   const TRIGGERS = ['Late night','Bored','Stressed','After a test','With friends','Actually hungry','Other'];
 
-  return {RATE, FALLBACK_START, TRACK0, HISTORY, MILES, ORGANS, DECKS, REELS, FLIPS, KITCHEN, TRIGGERS};
+  return {RATE, FALLBACK_START, TRACK0, HISTORY, MILES, ORGANS, DECKS, REELS, FLIPS, KITCHEN, TRIGGERS, MOTTOS};
 })();

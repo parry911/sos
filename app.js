@@ -559,7 +559,11 @@ function switchTab(t) {
 }
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) switchTab(b.dataset.tab); });
 
-function renderAll() { renderStoryRow(); renderComeback(); renderBodyMap(); renderWeekCard(); tick(); if ($('#you').classList.contains('on')) renderYou(); if ($('#stories').classList.contains('on')) renderStoryList(); }
+function renderMotto() {
+  const n = new Date(), m = D.MOTTOS[Math.floor(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) / DAY) % D.MOTTOS.length];
+  $('#mT').textContent = m.t; $('#mS').textContent = m.sub;
+}
+function renderAll() { renderMotto(); renderStoryRow(); renderComeback(); renderBodyMap(); renderWeekCard(); tick(); if ($('#you').classList.contains('on')) renderYou(); if ($('#stories').classList.contains('on')) renderStoryList(); }
 
 /* ---------- start ---------- */
 if (!standalone() && !S.gateSkipped) $('#gate').classList.remove('hide');

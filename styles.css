@@ -241,3 +241,7 @@ textarea{width:100%;min-height:90px;background:#0a100d;color:var(--ink);border:1
 
 .minifeed .ract{bottom:20px}
 .minifeed .reel{padding-right:72px}
+
+.motto{margin-top:12px}
+.motto b{display:block;font:italic 600 19px/1.25 Georgia,'Times New Roman',serif;color:#f7eedd}
+.motto span{display:block;font-size:13px;color:var(--mute);margin-top:2px}

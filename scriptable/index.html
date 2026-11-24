@@ -11,7 +11,8 @@ button{min-height:48px;padding:0 18px;border:0;border-radius:12px;background:#7e
 <div class="box"><b>1. SOS Widget</b><p>Name it exactly: SOS Widget</p><button data-c="a">Copy SOS Widget</button><pre id="a">// SOS Widget for Scriptable. Name this script exactly: SOS Widget
 // Home Screen (small or medium) and Lock Screen widget for your junk-free streak.
 const fm = FileManager.iCloud();
-const path = fm.joinPath(fm.documentsDirectory(), &quot;sos.json&quot;);
+const dir = fm.documentsDirectory();
+const path = fm.joinPath(dir, &quot;sos.json&quot;);
 let data = { start: &quot;2026-11-24T20:40:26+05:30&quot;, rate: 420, best: 0 };
 if (fm.fileExists(path)) {
   try { await fm.downloadFileFromiCloud(path); data = Object.assign(data, JSON.parse(fm.readString(path))); } catch (e) {}
@@ -25,6 +26,16 @@ const MILES = [
   [1440, &quot;Day 60&quot;, &quot;Your taste resets&quot;], [2160, &quot;Day 90&quot;, &quot;Mind and hormones&quot;],
   [4320, &quot;Day 180&quot;, &quot;Half a year free&quot;], [8760, &quot;Day 365&quot;, &quot;One year free&quot;]
 ];
+// Same daily line as the SOS app.
+const MOTTOS = [
+  &quot;Man jeetai jag jeet.&quot;, &quot;Every clean hour is repair.&quot;, &quot;The craving passes. You stay.&quot;,
+  &quot;Stronger than the craving.&quot;, &quot;Feed the body you&#x27;re building.&quot;, &quot;One more clean day.&quot;,
+  &quot;Real food. Real strength.&quot;, &quot;Your future self is watching.&quot;, &quot;Small wins, every night.&quot;,
+  &quot;Discipline is remembering what you want.&quot;
+];
+const now = new Date();
+const motto = MOTTOS[Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / DAY) % MOTTOS.length];
+
 const ms = Math.max(0, Date.now() - new Date(data.start).getTime());
 const days = Math.floor(ms / DAY);
 const hrs = Math.floor((ms % DAY) / HR), mins = Math.floor((ms % HR) / 6e4);
@@ -38,31 +49,44 @@ const fmtLeft = t =&gt; { const d = Math.floor(t / DAY), h = Math.floor((t % DAY
 const clean = days ? days + &quot;d &quot; + hrs + &quot;h clean&quot; : hrs + &quot;h &quot; + mins + &quot;m clean&quot;;
 
 const C = {
-  mint: new Color(&quot;#7ef0b5&quot;), track: new Color(&quot;#7ef0b5&quot;, 0.18), coral: new Color(&quot;#ff8a75&quot;),
-  ink: new Color(&quot;#eef7f1&quot;), mute: new Color(&quot;#8fb3a2&quot;), top: new Color(&quot;#173a2b&quot;), bottom: new Color(&quot;#081009&quot;)
+  cream: new Color(&quot;#f7eedd&quot;), soft: new Color(&quot;#efe3cc&quot;, 0.92), track: new Color(&quot;#ffffff&quot;, 0.22),
+  amber: new Color(&quot;#ffcf99&quot;), shade: new Color(&quot;#000000&quot;, 0.22), shadow: new Color(&quot;#000000&quot;, 0.6)
 };
+const serif = (n, s) =&gt; { try { return new Font(n, s); } catch (e) { return Font.systemFont(s); } };
 
-function ring(size, p, lw, fg, bg, big, small, bigColor, smallColor) {
+async function painting(name) {
+  const local = fm.joinPath(dir, &quot;sos-&quot; + name);
+  if (fm.fileExists(local)) { try { await fm.downloadFileFromiCloud(local); return fm.readImage(local); } catch (e) {} }
+  try { const img = await new Request(&quot;https://parry911.github.io/sos/scriptable/&quot; + name).loadImage(); fm.writeImage(local, img); return img; } catch (e) { return null; }
+}
+
+function ring(size, p, lw, fg, bg, big, small, bigColor, smallColor, shade) {
   const dc = new DrawContext();
   dc.size = new Size(size, size); dc.opaque = false; dc.respectScreenScale = true;
   const r = (size - lw) / 2, c = size / 2;
+  if (shade) { dc.setFillColor(shade); dc.fillEllipse(new Rect(lw, lw, size - 2 * lw, size - 2 * lw)); }
   dc.setStrokeColor(bg); dc.setLineWidth(lw);
   dc.strokeEllipse(new Rect(lw / 2, lw / 2, size - lw, size - lw));
   const q = Math.max(0.001, p), steps = Math.max(2, Math.ceil(180 * q));
   const pt = i =&gt; { const a = -Math.PI / 2 + 2 * Math.PI * q * i / steps; return new Point(c + r * Math.cos(a), c + r * Math.sin(a)); };
-  const path = new Path(); path.move(pt(0));
-  for (let i = 1; i &lt;= steps; i++) path.addLine(pt(i));
-  dc.addPath(path); dc.setStrokeColor(fg); dc.setLineWidth(lw); dc.strokePath();
+  const pth = new Path(); pth.move(pt(0));
+  for (let i = 1; i &lt;= steps; i++) pth.addLine(pt(i));
+  dc.addPath(pth); dc.setStrokeColor(fg); dc.setLineWidth(lw); dc.strokePath();
   dc.setFillColor(fg);
   [pt(0), pt(steps)].forEach(e =&gt; dc.fillEllipse(new Rect(e.x - lw / 2, e.y - lw / 2, lw, lw)));
   dc.setTextAlignedCenter();
-  dc.setFont(Font.boldRoundedSystemFont(size * 0.34)); dc.setTextColor(bigColor);
-  dc.drawTextInRect(big, new Rect(0, size * 0.26, size, size * 0.42));
-  dc.setFont(Font.mediumSystemFont(size * 0.11)); dc.setTextColor(smallColor);
-  dc.drawTextInRect(small, new Rect(0, size * 0.62, size, size * 0.16));
+  dc.setFont(serif(&quot;Georgia-Bold&quot;, size * 0.34)); dc.setTextColor(bigColor);
+  dc.drawTextInRect(big, new Rect(0, size * 0.24, size, size * 0.42));
+  dc.setFont(serif(&quot;Georgia-Italic&quot;, size * 0.12)); dc.setTextColor(smallColor);
+  dc.drawTextInRect(small, new Rect(0, size * 0.62, size, size * 0.17));
   return dc.getImage();
 }
-function text(stack, s, font, color, lines) { const t = stack.addText(s); t.font = font; t.textColor = color; if (lines) t.lineLimit = lines; t.minimumScaleFactor = 0.7; return t; }
+function text(stack, s, font, color, lines, shadow) {
+  const t = stack.addText(s); t.font = font; t.textColor = color; t.minimumScaleFactor = 0.7;
+  if (lines) t.lineLimit = lines;
+  if (shadow) { t.shadowColor = C.shadow; t.shadowRadius = 3; t.shadowOffset = new Point(0, 1); }
+  return t;
+}
 
 const fam = config.widgetFamily || &quot;medium&quot;;
 const w = new ListWidget();
@@ -76,34 +100,32 @@ if (fam === &quot;accessoryCircular&quot;) {
 } else if (fam === &quot;accessoryInline&quot;) {
   w.addText(&quot;Day &quot; + days + &quot; · &quot; + clean + &quot; · &quot; + kept);
 } else if (fam === &quot;accessoryRectangular&quot;) {
-  text(w, &quot;Day &quot; + days + &quot; · Hun nahi&quot;, Font.boldSystemFont(15), Color.white(), 1);
-  text(w, clean + &quot; · &quot; + kept + &quot; kept&quot;, Font.systemFont(12), Color.white(), 1);
-  text(w, next ? next[1] + &quot; in &quot; + fmtLeft(left) : &quot;Every milestone unlocked&quot;, Font.systemFont(12), Color.white(), 1);
+  text(w, &quot;Day &quot; + days + &quot; · &quot; + clean, Font.boldSystemFont(15), Color.white(), 1);
+  text(w, kept + &quot; kept&quot; + (next ? &quot; · &quot; + next[1] + &quot; in &quot; + fmtLeft(left) : &quot;&quot;), Font.systemFont(12), Color.white(), 1);
+  text(w, motto, Font.italicSystemFont(12), Color.white(), 1);
 } else {
-  const g = new LinearGradient();
-  g.colors = [C.top, C.bottom]; g.locations = [0, 1];
-  g.startPoint = new Point(0, 0); g.endPoint = new Point(1, 1);
-  w.backgroundGradient = g;
+  const bg = await painting(fam === &quot;small&quot; ? &quot;bg-small.jpg&quot; : &quot;bg-medium.jpg&quot;);
+  if (bg) w.backgroundImage = bg; else w.backgroundColor = new Color(&quot;#4a4236&quot;);
   if (fam === &quot;small&quot;) {
-    w.setPadding(12, 12, 12, 12);
+    w.setPadding(12, 12, 10, 12);
     const top = w.addStack(); top.addSpacer();
-    top.addImage(ring(96, pct, 9, C.mint, C.track, String(days), dayWord, C.ink, C.mute)).imageSize = new Size(96, 96);
+    top.addImage(ring(92, pct, 8, C.cream, C.track, String(days), dayWord, C.cream, C.soft, C.shade)).imageSize = new Size(92, 92);
     top.addSpacer();
-    w.addSpacer(6);
-    const b = w.addStack(); b.addSpacer(); text(b, kept + &quot; kept&quot;, Font.boldSystemFont(13), C.coral, 1); b.addSpacer();
+    w.addSpacer(4);
+    const b = w.addStack(); b.addSpacer(); text(b, kept + &quot; kept&quot;, serif(&quot;Georgia-Bold&quot;, 13), C.amber, 1, true); b.addSpacer();
+    const m = w.addStack(); m.addSpacer(); text(m, motto, serif(&quot;Georgia-Italic&quot;, 10), C.soft, 1, true); m.addSpacer();
   } else {
     w.setPadding(14, 16, 14, 16);
     const row = w.addStack(); row.layoutHorizontally(); row.centerAlignContent();
-    row.addImage(ring(122, pct, 11, C.mint, C.track, String(days), dayWord, C.ink, C.mute)).imageSize = new Size(122, 122);
+    row.addImage(ring(120, pct, 10, C.cream, C.track, String(days), dayWord, C.cream, C.soft, C.shade)).imageSize = new Size(120, 120);
     row.addSpacer(16);
     const col = row.addStack(); col.layoutVertically();
-    text(col, &quot;Junk-free · hun nahi&quot;, Font.semiboldSystemFont(13), C.mute, 1);
+    text(col, motto, serif(&quot;Georgia-Italic&quot;, 13), C.soft, 1, true);
     col.addSpacer(6);
-    text(col, next ? &quot;Next: &quot; + next[1] : &quot;All unlocked&quot;, Font.semiboldSystemFont(13), C.mint, 1);
-    text(col, next ? next[2] : &quot;One year free&quot;, Font.boldSystemFont(17), C.ink, 2);
-    text(col, next ? &quot;in &quot; + fmtLeft(left) : &quot;&quot;, Font.mediumSystemFont(13), C.mute, 1);
+    text(col, next ? &quot;Next: &quot; + next[1] + &quot; · in &quot; + fmtLeft(left) : &quot;Every milestone unlocked&quot;, serif(&quot;Georgia&quot;, 12), C.soft, 1, true);
+    text(col, next ? next[2] : &quot;One year free&quot;, serif(&quot;Georgia-Bold&quot;, 18), C.cream, 2, true);
     col.addSpacer();
-    text(col, kept + &quot; kept · &quot; + clean, Font.boldSystemFont(13), C.coral, 1);
+    text(col, kept + &quot; kept · &quot; + clean, serif(&quot;Georgia-Bold&quot;, 13), C.amber, 1, true);
     row.addSpacer();
   }
 }
