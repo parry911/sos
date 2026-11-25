@@ -499,7 +499,22 @@ $('#craves').addEventListener('click', e => {
   $('#ask').scrollIntoView({behavior:'smooth', block:'nearest'});
 });
 $('#hYes').onclick = () => { sos.hungry = true; $('#dish2').innerHTML = dishHTML(D.KITCHEN.find(k => k.id === sos.want), true); step('hungry'); };
-$('#hNo').onclick = () => { sos.hungry = false; startWave(); };
+$('#hNo').onclick = () => { sos.hungry = false; coachLink('#coachGo', false); step('how'); };
+$('#waveGo').onclick = startWave;
+/* Craving coach: lives on the Mains Run page in Claude. The link carries what he wants, his streak, best, fund and waves won
+   as one plain #name (the only kind of hash an artifact page receives). This app keeps the score: when he comes back, it asks how it went. */
+const COACH = 'https://claude.ai/artifact/SoUNgwpovKoWycJGTuXkBB';
+function coachLink(sel, after) {
+  const h = Math.floor(streakMs() / HR), b = Math.max(S.best || 0, Math.floor(streakMs() / DAY));
+  const tag = ['craving', sos.want || '', after ? 'after' : '', 'h' + h, 'b' + b, 'r' + Math.round(fundKept()), 'w' + wavesWon()].filter(Boolean).join('-');
+  $(sel).href = COACH + '#' + tag;
+}
+function toCoach() {
+  sos.coach = true; clearInterval(waveT);
+  setTimeout(() => { $('#endQ').textContent = 'Back from your coach. Did it pass?'; step('end'); }, 600);
+}
+$('#coachGo').addEventListener('click', toCoach);
+$('#coachGo2').addEventListener('click', toCoach);
 $('#ateReal').onclick = () => finish('real');
 $('#rate').innerHTML = Array.from({length:10}, (_, i) => `<button data-v="${i+1}">${i+1}</button>`).join('');
 $('#rate').addEventListener('click', e => {
@@ -542,13 +557,13 @@ $('#gone').onclick = () => { clearInterval(waveT); $('#endQ').textContent = 'Gon
 $('#nextReel').onclick = () => $('#miniFeed').scrollBy({top: $('#miniFeed').clientHeight, behavior:'smooth'});
 $('#miniFeed').addEventListener('click', e => { const pb = e.target.closest('[data-pin]'); if (pb) togglePin(pb.dataset.pin, e.target.closest('.reel')); });
 $('#won').onclick = () => finish('won');
-$('#still').onclick = () => { clearInterval(waveT); const k = D.KITCHEN.find(x => x.id === sos.want); $('#dish3').innerHTML = k ? dishHTML(k, true) : ''; step('advice'); };
+$('#still').onclick = () => { clearInterval(waveT); const k = D.KITCHEN.find(x => x.id === sos.want); $('#dish3').innerHTML = k ? dishHTML(k, true) : ''; coachLink('#coachGo2', true); step('advice'); };
 $('#realFirst').onclick = () => finish('real');
 $('#ordered').onclick = () => { logUrge('ate'); closeSOS(); slipSheet(); };
 $('#sClose').onclick = closeSOS;
 swipeDown($('#sos'), {exclude: '.minifeed,.rate,.scratch,input', close: closeSOS});
 $('#sosTab').onclick = openSOS;
-function logUrge(outcome) { S.urges.unshift({at:new Date().toISOString(), want:sos.want, hungry:sos.hungry, ratings:sos.ratings || [], outcome}); S.urges = S.urges.slice(0, 1000); save(); queueSync(dkey(new Date())); }
+function logUrge(outcome) { S.urges.unshift(Object.assign({at:new Date().toISOString(), want:sos.want, hungry:sos.hungry, ratings:sos.ratings || [], outcome}, sos.coach ? {coach:true} : {})); S.urges = S.urges.slice(0, 1000); save(); queueSync(dkey(new Date())); }
 function finish(outcome) {
   clearInterval(waveT); logUrge(outcome);
   const [tag, head, body] = rewardCard();
@@ -721,7 +736,7 @@ function snapshot(day) {
   else lines.push('No food logged in SOS.');
   const w = S.weights.find(x => x.d === day); if (w) lines.push('Weight: ' + w.kg + ' kg');
   const urges = S.urges.filter(u => dkey(u.at) === day), won = urges.filter(u => u.outcome === 'won' || u.outcome === 'real').length;
-  if (urges.length) lines.push(`Cravings: ${urges.length}, rode out ${won}`);
+  if (urges.length) { const ch = urges.filter(u => u.coach).length; lines.push(`Cravings: ${urges.length}, rode out ${won}` + (ch ? `, ${ch} with the craving coach` : '')); }
   const dec = (S.decoys || []).filter(x => dkey(x.at) === day); if (dec.length) lines.push(`Decoy orders: ${dec.length} (${dec.map(x => x.shop).join(', ')}): ${rupees(dec.reduce((a, x) => a + x.total, 0))} not spent, about ${dec.reduce((a, x) => a + x.kcal, 0)} kcal not eaten`);
   S.slips.filter(x => dkey(x.at) === day).forEach(x => lines.push(`Slip at ${new Date(x.at).toLocaleTimeString('en-IN', {hour:'numeric', minute:'2-digit'})}${x.trigger ? ' (' + x.trigger + ')' : ''}${x.what ? ': ' + x.what : ''}${x.spent ? ', ' + rupees(x.spent) : ''}${x.after && x.after.length ? ', 20 min later felt ' + x.after.join(', ').toLowerCase() : ''}`));
   if (day === dkey(new Date())) lines.push('Junk-free streak so far: ' + dur(streakMs()));
