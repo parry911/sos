@@ -590,3 +590,37 @@ details.set li b,details.set li code{display:inline}
 .fo .el-k.top{border-color:#0b7a50;background:#eaf7f0}
 .fo .el-k small,.fo .el-r span{color:#5d6662}
 .fo-end h3{font:800 20px/1.2 Inter,sans-serif;margin:26px 0 4px}
+
+/* v8: motivating eat list + craving chooser */
+.el-vs{display:grid;gap:8px;margin-bottom:6px}
+.el-vs>div{border-radius:16px;padding:12px 14px}
+.el-vs h6{margin:0 0 6px;font:800 12px/1.2 'Space Grotesk',Inter,sans-serif;letter-spacing:.07em;text-transform:uppercase}
+.el-vs ul{margin:0;padding-left:18px;font-size:14px;line-height:1.4}
+.el-vs li{margin:4px 0}
+.el-vs li small{display:block;font-size:11px;opacity:.7}
+.el-good{background:var(--mint2);border:1px solid #7ef0b555}
+.el-good h6{color:var(--mint)}
+.el-bad{background:var(--coral2);border:1px solid #ff6b5755}
+.el-bad h6{color:var(--coral)}
+.el-m{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;padding:12px;border-radius:16px;background:var(--card);border:1px solid var(--line);margin-bottom:8px}
+.el-m.top{border-color:var(--mint);background:var(--mint2)}
+.el-m .t b{display:block;font-size:16px}
+.el-m .t small{display:block;font-size:12px;color:var(--mute);margin-top:1px}
+.el-m .g,.el-r .g,.el-wb .g{display:block;font-size:13px;color:var(--mint);margin-top:6px;line-height:1.35}
+.el-m .c,.el-wb .c{display:block;font-size:13px;color:#ff9b88;margin-top:4px;line-height:1.35}
+.el-m .g::before,.el-r .g::before,.el-wb .g::before{content:'+ ';font-weight:800}
+.el-m .c::before,.el-wb .c::before{content:'− ';font-weight:800}
+.el-wb{margin:8px 0 4px;padding:10px 12px;border-radius:14px;background:var(--card);border:1px solid var(--line)}
+.fo .el-good{background:#eaf7f0;border-color:#bfe6d1}
+.fo .el-good h6{color:#0b7a50}
+.fo .el-bad{background:#fff1ee;border-color:#f6c9c0}
+.fo .el-bad h6{color:#c8361f}
+.fo .el-m{background:#f5f7f6;border-color:#e6eae8}
+.fo .el-m.top{border-color:#0b7a50;background:#eaf7f0}
+.fo .el-m .t small{color:#5d6662}
+.fo .el-m .g,.fo .el-r .g{color:#0b7a50}
+.fo .el-m .c{color:#c8361f}
+.ch-o{display:flex;gap:14px;align-items:center;width:100%;text-align:left;padding:16px;border-radius:18px;background:var(--card);border:1px solid var(--line2);margin-top:10px}
+.ch-o.hot{border-color:var(--coral);background:var(--coral2)}
+.ch-o b{display:block;font-size:18px}
+.ch-o small{display:block;font-size:13px;color:var(--mute);margin-top:2px;line-height:1.35}

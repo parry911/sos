@@ -702,28 +702,51 @@ function focusFor(names) { const out = []; names.forEach(n => { const m = KMAP.f
 function eatHTML(focus) {
   focus = focus || [];
   const ks = [...D.KITCHEN].sort((a, b) => (focus.includes(a.id) ? focus.indexOf(a.id) : 99) - (focus.includes(b.id) ? focus.indexOf(b.id) : 99));
-  return `<div class="el"><h5>Home versions of what you crave</h5><div class="el-g">${ks.map(k => `<button class="el-k${focus.includes(k.id) ? ' top' : ''}" data-rk="${k.id}"><span class="el-ic" style="background:${k.color}">${ART[k.art]().replace('<svg', '<svg width="28" height="28"')}</span><span><b>${esc(k.name)}</b><small>For ${esc(k.craving.toLowerCase())} · ${k.mins} min</small></span></button>`).join('')}</div>
-    <h5>From your orders, these were fine</h5>${D.EAT.map(x => `<div class="el-r"><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div>`).join('')}
-    <h5>Your everyday foods</h5>${D.EVERYDAY.map(([t, d]) => `<div class="el-r"><b>${esc(t)}</b><span>${esc(d)}</span></div>`).join('')}</div>`;
+  return `<div class="el">
+    <div class="el-vs"><div class="el-good"><h6>What this list gives you</h6><ul>${D.GOOD.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
+    <div class="el-bad"><h6>What the other list does</h6><ul>${D.BAD.map(([t, src]) => `<li>${esc(t)}<small>${esc(src)}</small></li>`).join('')}</ul></div></div>
+    <h5>Make one right now</h5>${ks.map(k => { const w = D.KWHY[k.id] || ['', '']; return `<button class="el-m${focus.includes(k.id) ? ' top' : ''}" data-rk="${k.id}"><span class="el-ic" style="background:${k.color}">${ART[k.art]().replace('<svg', '<svg width="30" height="30"')}</span><span class="t"><b>${esc(k.name)}</b><small>For ${esc(k.craving.toLowerCase())} · ${k.mins} min · tap for the recipe</small><span class="g">${esc(w[0])}</span><span class="c">${esc(w[1])}</span></span></button>`; }).join('')}
+    <h5>From your orders, these were fine</h5>${D.EAT.map(x => `<div class="el-r"><b>${esc(x.t)}</b><span>${esc(x.d)}</span><span class="g">${esc(D.EATWHY[x.t] || '')}</span></div>`).join('')}
+    <h5>Your everyday foods</h5>${D.EVERYDAY.map(([t, d]) => `<div class="el-r"><b>${esc(t)}</b><span>${esc(d)}</span><span class="g">${esc(D.EVERYWHY[t] || '')}</span></div>`).join('')}</div>`;
+}
+function recipeHTML(id) { const k = D.KITCHEN.find(x => x.id === id), w = D.KWHY[id] || ['', '']; return dishHTML(k, true) + `<div class="el-wb"><span class="g">${esc(w[0])}</span><span class="c">${esc(w[1])}</span></div>`; }
+function cravingSheet() {
+  if (S.decoy) { foOpen(); return; }
+  sheet(`<div class="q" style="font-size:30px">Craving something?</div><p>Pick one. Each of these gets you through it.</p>
+    <button class="ch-o hot" id="chOrder"><span class="el-ic" style="background:#3a1a12">${ART.burger().replace('<svg', '<svg width="30" height="30"')}</span><span><b>Order it</b><small>Browse your restaurants, order, pay. Nothing arrives, and the craving passes while you wait.</small></span></button>
+    <button class="ch-o" id="chEat"><span class="el-ic" style="background:#173a2b">${ART.bowl().replace('<svg', '<svg width="30" height="30"')}</span><span><b>Eat from your list</b><small>Food that builds you, and what each one gives your body.</small></span></button>
+    <button class="ch-o" id="chMake"><span class="el-ic" style="background:#4a2a1a">${ART.cup().replace('<svg', '<svg width="30" height="30"')}</span><span><b>Make one right now</b><small>The home version of exactly what you want, in 3 to 30 minutes.</small></span></button>
+    <button class="btn dim full" id="chSOS">Watch my video and ride the wave</button>`, () => {
+      $('#chOrder').onclick = () => { closeSheet(); foOpen(); };
+      $('#chEat').onclick = () => eatSheet();
+      $('#chMake').onclick = makeSheet;
+      $('#chSOS').onclick = () => { closeSheet(); openSOS(); };
+    });
+}
+function makeSheet() {
+  sheet(`<div class="q" style="font-size:30px">What do you want?</div><p>Pick the craving. You get the home version and the recipe.</p><div class="grid2">${D.KITCHEN.map(k => `<button class="crave" data-mk="${k.id}"><span class="ic" style="background:${k.color}">${ART[k.art]().replace('<svg', '<svg width="30" height="30"')}</span><b>${esc(k.craving)}</b></button>`).join('')}</div><div id="kOut"></div><button class="btn dim full" id="shClose">Close</button>`, l => {
+    $('#shClose').onclick = closeSheet;
+    l.querySelectorAll('[data-mk]').forEach(b => b.onclick = () => { $$('.sheet .crave').forEach(c => c.classList.toggle('sel', c === b)); $('#kOut').innerHTML = recipeHTML(b.dataset.mk); $('#kOut').scrollIntoView({behavior:'smooth', block:'start'}); });
+  });
 }
 function neverSheet() {
   sheet(`<div class="q" style="font-size:28px">Don’t order these again</div><p>Straight from your Swiggy, Zomato, Blinkit and Instamart orders, Sep–Nov 2026.</p><div class="nl">${D.NEVER.map(x => `<div class="nv"><b>${esc(x.t)}${x.n ? `<i>${esc(x.n)}</i>` : ''}</b><span>${esc(x.d)}</span></div>`).join('')}</div><button class="btn mint full" id="toEat">What can I eat instead?</button><button class="btn dim full" id="shClose">Close</button>`, () => { $('#shClose').onclick = closeSheet; $('#toEat').onclick = () => eatSheet(); });
 }
 function eatSheet(recipe, focus) {
-  sheet(`<div class="q" style="font-size:28px">Eat these instead</div><p>Tap a home version for the recipe.</p><div id="kOut"></div>${eatHTML(focus)}<button class="btn dim full" id="shClose">Close</button>`, l => {
+  sheet(`<div class="q" style="font-size:28px">Eat these instead</div><p>Everything on this page builds you. Everything on the other list costs you.</p><div id="kOut"></div>${eatHTML(focus)}<button class="btn dim full" id="shClose">Close</button>`, l => {
     $('#shClose').onclick = closeSheet;
-    const show = id => { $('#kOut').innerHTML = dishHTML(D.KITCHEN.find(k => k.id === id), true); $('#kOut').scrollIntoView({behavior:'smooth', block:'start'}); };
+    const show = id => { $('#kOut').innerHTML = recipeHTML(id); $('#kOut').scrollIntoView({behavior:'smooth', block:'start'}); };
     l.querySelectorAll('[data-rk]').forEach(b => b.onclick = () => show(b.dataset.rk));
     if (recipe) show(recipe);
   });
 }
 $('#ebN').onclick = neverSheet;
 $('#ebE').onclick = () => eatSheet();
-$('#eatOrder').onclick = () => foOpen();
+$('#eatOrder').onclick = () => cravingSheet();
 function renderEatbar() {
   const live = !!S.decoy;
   $('#eatOrder').classList.toggle('live', live);
-  $('#ebOrdB').textContent = live ? 'Track' : 'Order'; $('#ebOrdS').textContent = 'on the way'; $('#ebOrdS').classList.toggle('hide', !live);
+  $('#ebOrdB').textContent = live ? 'Track' : 'Craving?'; $('#ebOrdS').textContent = 'your order'; $('#ebOrdS').classList.toggle('hide', !live);
 }
 
 /* ---------- decoy ordering app ---------- */

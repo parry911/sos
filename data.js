@@ -275,7 +275,38 @@ window.SOS_DATA = (() => {
     {shop:'br', items:['Banana N Strawberry Ice Cream','Gold Medal Ribbon Ice Cream (double)'], total:493, when:'2 Nov, 8:10 PM'}
   ];
 
+
+  // Why the eat list wins: numbers come from his own food list in the app, or cited studies.
+  const GOOD = ['Protein that keeps your muscle while the fat comes off, and keeps you full', 'Fibre that slows the sugar rush and feeds your gut bacteria', 'Potassium that helps your body flush salt: less bloat, lower blood pressure', 'Calcium, iron and vitamin C from real food', 'Omega-3 from fish and walnuts for your heart and brain'];
+  const BAD = [['One fast-food meal stiffens your arteries for about 4 hours', 'Vogel et al., 1997'], ['A sugar load drops testosterone by about 25% for 2 hours', 'Caronia et al., 2013'], ['On ultra-processed food, people ate about 500 kcal more a day without noticing', 'Hall et al., NIH, 2019'], ['Four days of junk breakfasts made memory measurably worse', 'Attuquayefio et al., 2017'], ['Packet snacks and sauces push your salt far past the 5 g a day limit', 'ICMR-NIN / WHO']];
+  const KWHY = {
+    burger: ['Lean chicken keema and egg: about 25–30 g protein a burger, air-fried, no mayo', 'The fried burger: refined bun, mayo and frying oil, and stiffer arteries for hours'],
+    tacos: ['Whole-grain makki, fresh salsa and hung curd: fibre, vitamin C and live cultures', 'Packet nachos and Lava dip: refined corn fried in oil, salt and cheese sauce'],
+    chicken: ['Same crunch with a teaspoon of oil, and the full protein of real chicken', 'Deep-fried popcorn and nuggets: batter that soaks up reused frying oil'],
+    sweet: ['A scoop of whey gives 18 g protein; two bananas, 840 mg potassium. No added sugar', 'Ice cream and cake: sugar and cream, and testosterone down about 25% for 2 hours'],
+    soda: ['Lemon, rock salt, jeera and mint: vitamin C and zero added sugar', 'Nimbooz and Limca: sugar water that spikes your energy, then drops it'],
+    latte: ['Whey, milk and coffee: about 25 g protein and 250 mg calcium, no syrup', 'Your hazelnut thickshake: 403 kcal, 62 g carbs, only 10 g protein'],
+    chips: ['Roasted makhana: light and crunchy, with magnesium and potassium', 'Chips and namkeen: refined oil and salt, and the bag is gone before you notice'],
+    sauce: ['Fresh tomato and garlic: lycopene, no preservatives, no added sugar', 'Ketchup is about a fifth sugar, and packet sauces are loaded with salt']
+  };
+  const EATWHY = {
+    'Tandoori fish tikka': '32 g protein in 150 g, from a tandoor instead of a fryer. Fish fat is the heart-friendly kind.',
+    'Steamed chicken momos': 'Steamed, not fried: the same comfort food without the oil.',
+    'Paneer thali': 'Dal, paneer and missi roti: protein from three sources, plus fibre and iron.',
+    'Grilled chicken & rice': '38 g protein in one bowl.',
+    'Paneer, dahi, bran bread, lauki': 'The base of your home meals: protein, calcium, fibre.'
+  };
+  const EVERYWHY = {
+    'Protein': 'Eggs: 6 g protein each. Whey: 18 g a scoop. Dry chicken: 38 g in 150 g. Soya chunks: 21 g. Protein keeps your muscle while the fat comes off.',
+    'Dal & chana': '9–10 g protein and 6–9 g fibre a katori, plus iron. Fibre slows the sugar rush and feeds your gut.',
+    'Roti & rice': 'Whole-wheat roti: 3 g fibre. Missi roti: 6 g protein. Slow fuel instead of a refined-flour spike.',
+    'Sabzi & salad': 'Saag: 200 mg calcium and 30 mg vitamin C a katori. Leafy greens carry nitrate, which helps your blood vessels relax.',
+    'Dairy & drinks': 'Milk: 250 mg calcium a glass. Dahi and chaas carry live cultures for your gut.',
+    'Fruit': 'A banana: 420 mg potassium, which helps your body flush salt. Papaya: 88 mg vitamin C a cup.',
+    'Nuts': 'Walnuts carry plant omega-3, almonds magnesium. A handful of roasted chana: 6.5 g protein.'
+  };
+
   const TRIGGERS = ['Late night','Bored','Stressed','After a test','With friends','Actually hungry','Other'];
 
-  return {RATE, FALLBACK_START, TRACK0, HISTORY, MILES, ORGANS, DECKS, REELS, FLIPS, KITCHEN, TRIGGERS, HARD, NEVER, EAT, TICK_NEVER, TICK_EAT, EVERYDAY, SHOPS, PAST};
+  return {RATE, FALLBACK_START, TRACK0, HISTORY, MILES, ORGANS, DECKS, REELS, FLIPS, KITCHEN, TRIGGERS, HARD, NEVER, EAT, TICK_NEVER, TICK_EAT, EVERYDAY, SHOPS, PAST, GOOD, BAD, KWHY, EATWHY, EVERYWHY};
 })();
