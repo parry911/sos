@@ -10,10 +10,12 @@ if (fm.fileExists(path)) {
 if (q.start) data.start = q.start;
 if (q.best) data.best = Number(q.best);
 if (q.rate) data.rate = Number(q.rate);
+if (q.origin) data.origin = q.origin;
+if (q.debit !== undefined) data.debit = Number(q.debit) || 0;
 data.synced = new Date().toISOString();
 fm.writeString(path, JSON.stringify(data));
 const n = new Notification();
 n.title = "SOS widget updated";
-n.body = "Streak counted from " + new Date(data.start).toLocaleString("en-IN") + ". Head back to SOS.";
+n.body = "Streak counted from " + new Date(data.start).toLocaleString("en-IN") + ", freedom fund updated. Head back to SOS.";
 await n.schedule();
 Script.complete();

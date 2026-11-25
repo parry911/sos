@@ -37,7 +37,7 @@
   <div class="tiles">
     <div class="tile"><span>Streak</span><b class="num" id="tDays">0 days</b></div>
     <div class="tile"><span>Waves won</span><b class="num" id="tWaves">0</b></div>
-    <div class="tile"><span>Kept</span><b class="num" id="tKept">₹0</b></div>
+    <div class="tile"><span>Best streak</span><b class="num" id="tKept">0 days</b></div>
   </div>
   <div id="fundCard"></div>
   <button class="card" id="foodCard"></button>
@@ -107,23 +107,23 @@
   <div id="hours"></div>
   <button class="btn dim full" id="slipBtn" style="margin-top:22px">I slipped</button>
 
-  <h2>Setup</h2>
+  <details class="settings" id="settings"><summary><span>Settings</span><small id="setSum">Mains Run, video, music, widget, backup</small></summary>
   <div class="set">
     <b>Send food to Mains Run</b>
-    <p id="syncStatus">Not connected. Once it is, everything you log here (food, weight, cravings, slips) goes to your Mains Run page every night, with no taps.</p>
+    <p id="syncStatus">Not connected.</p>
     <div class="row"><input id="syncIn" type="url" inputmode="url" autocomplete="off" placeholder="Paste the Google Form pre-filled link" aria-label="Google Form pre-filled link" style="flex:1;min-width:0;min-height:44px;border-radius:12px;border:1px solid var(--line2);background:#0a100d;color:var(--ink);padding:0 12px;font:16px Inter,sans-serif"><button class="btn mint" id="syncSave">Save</button></div>
   </div>
   <details class="set"><summary>Connect Mains Run (once)</summary><ol>
     <li>On your Mac or phone, open <code>forms.new</code>. Name the form <b>SOS food log</b>.</li>
     <li>Change the first question’s type to <b>Paragraph</b> and call it <b>entry</b>.</li>
-    <li>Open the <b>Responses</b> tab → <b>Link to Sheets</b> → <b>Create a new spreadsheet</b> → Create. Keep its name, <b>SOS food log (Responses)</b>.</li>
-    <li>Tap <b>Publish</b> (top right), set responders to <b>Anyone with the link</b>, and publish. An unpublished form silently drops everything.</li>
-    <li>Tap <b>⋮</b> (top right) → <b>Get pre-filled link</b>, type <b>x</b> in the answer, tap <b>Get link</b> → <b>Copy link</b>.</li>
+    <li>Open the <b>Responses</b> tab → <b>Link to Sheets</b> → <b>Create a new spreadsheet</b> → Create.</li>
+    <li>Tap <b>Publish</b>, set responders to <b>Anyone with the link</b>, and publish. An unpublished form silently drops everything.</li>
+    <li>Tap <b>⋮</b> → <b>Get pre-filled link</b>, type <b>x</b> in the answer, tap <b>Get link</b> → <b>Copy link</b>.</li>
     <li>Paste it above and tap <b>Save</b>. The link stays on this phone only.</li>
   </ol></details>
   <div class="set">
     <b>Your SOS video</b>
-    <p id="vidStatus">Not added yet. Save the video from our chat to Photos or Files, then pick it here. It stays on this phone.</p>
+    <p id="vidStatus">Not added yet.</p>
     <div class="row"><label class="btn mint" for="vidFile" style="display:inline-grid;place-items:center">Choose video</label><input type="file" id="vidFile" accept="video/*" class="hide"></div>
   </div>
   <div class="set">
@@ -133,35 +133,32 @@
   </div>
   <div class="set">
     <b>Your music</b>
-    <p>Add songs you have on this phone (from Files). Stories and reels play them instead of the built-in beats, starting partway in. They never leave this phone.</p>
+    <p>Songs from Files play in stories and reels instead of the built-in soundtrack. They never leave this phone.</p>
     <div id="musicList"></div>
     <div class="row" style="margin-top:8px"><label class="btn dim" for="musFile" style="display:inline-grid;place-items:center">Add songs</label><input type="file" id="musFile" accept="audio/*" multiple class="hide"><label style="display:flex;align-items:center;gap:8px;font-size:14px;min-height:44px"><input type="checkbox" id="musUse" style="width:20px;height:20px"> Use my songs</label></div>
   </div>
   <div class="set">
     <b>Lock-screen widget</b>
-    <p>Sends your current streak start to the Scriptable widget. Do it after you log a slip.</p>
+    <p>Sends your streak and freedom fund to the Scriptable widget. Do it after you log a slip. New hard truths reach the widget on their own.</p>
     <div class="row"><a class="btn dim" id="syncWidget" href="#" style="display:inline-grid;place-items:center;text-decoration:none">Sync widget now</a></div>
   </div>
-  <details class="set"><summary>Set up the widget (once)</summary><ol>
+  <details class="set"><summary>Set up the widget</summary><ol>
     <li>Install <b>Scriptable</b> from the App Store (free).</li>
-    <li>Open <code>parry911.github.io/sos/scriptable/</code> in Safari, copy <b>SOS Widget</b>, and in Scriptable tap + and paste it. Name the script exactly <code>SOS Widget</code>.</li>
+    <li>Open <code>parry911.github.io/sos/scriptable/</code> in Safari, copy <b>SOS Widget</b>, and in Scriptable replace the old script with it (or tap + and paste). Name it exactly <code>SOS Widget</code>.</li>
     <li>Do the same with <b>SOS Sync</b>, named exactly <code>SOS Sync</code>.</li>
-    <li>Come back here and tap <b>Sync widget now</b>. Scriptable opens for a second and saves your streak.</li>
-    <li>Long-press your Lock Screen → Customise → Lock Screen → tap the widget area → Scriptable. Tap the new widget and choose script <b>SOS Widget</b>.</li>
+    <li>Come back here and tap <b>Sync widget now</b>.</li>
+    <li>Long-press your Lock Screen → Customise → Lock Screen → tap the widget area → Scriptable, and choose script <b>SOS Widget</b>.</li>
   </ol></details>
-  <details class="set"><summary>Night alert (once)</summary><ol>
-    <li>Already have a 9 PM automation (for logging your Mains Run day)? Open it in <b>Shortcuts</b> → Automation and add the action below to it. Otherwise: + → <b>Time of Day</b>, <b>9:00 PM</b>, Daily, <b>Run Immediately</b>.</li>
-    <li>Add the action <b>Show Notification</b> with: <code>A third of your orders came after 10 PM. Craving? Open SOS before any app.</code></li>
-    <li>Make a second one at <b>11:30 PM</b>: <code>This is the hour you order. Once, a payment failed and you ordered again 2 minutes later. Not tonight.</code></li>
-    <li>Close the day: a third one at the time you usually wind down, with <code>Kirtan Sohila. The day is done, and so is the kitchen.</code> Add <b>Open URLs</b> with your favourite Kirtan Sohila recording if you want it to start playing.</li>
+  <details class="set"><summary>Night alert</summary><ol>
+    <li>In <b>Shortcuts</b> → Automation, open your 9 PM automation and add <b>Show Notification</b> with: <code>A third of your orders came after 10 PM. Craving? Open SOS before any app.</code></li>
   </ol></details>
   <div class="set">
     <b>Backup</b>
-    <p>Your streak lives on this phone. Copy a backup now and then and keep it in Notes.</p>
+    <p id="bkStatus">Your streak and history live on this phone. Once Mains Run is connected, a backup goes to your SOS sheet every week.</p>
     <div class="row"><button class="btn dim" id="copyBackup">Copy backup</button><button class="btn dim" id="showRestore">Restore</button></div>
-    <div id="restoreBox" class="hide" style="margin-top:10px"><textarea id="restoreText" aria-label="Paste backup"></textarea><button class="btn mint full" id="doRestore">Restore this backup</button></div>
+    <div id="restoreBox" class="hide" style="margin-top:10px"><p style="margin-top:0">Paste a backup from Notes, or the whole “SOS backup” cell from your SOS sheet.</p><textarea id="restoreText" aria-label="Paste backup"></textarea><button class="btn mint full" id="doRestore">Restore this backup</button></div>
   </div>
-  <p class="mute tiny" id="dispInfo"></p>
+  </details>
 </div></section>
 
 <!-- TAB BAR -->

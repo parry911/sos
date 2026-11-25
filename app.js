@@ -34,7 +34,8 @@ if (!S.food) { S.food = {}; save(); }
 if (!S.prof) { S.prof = {h:184, age:null, act:1.375, def:500}; save(); }
 if (!S.origin) { S.origin = S.slips.reduce((a, x) => new Date(x.at) < new Date(a) ? x.at : a, S.start); save(); }
 const curWeight = () => S.weights.length ? S.weights[S.weights.length-1].kg : 93.25;
-const fill = s => String(s).replace('{liver}', (curWeight()*0.03).toFixed(1) + ' to ' + (curWeight()*0.05).toFixed(1) + ' kg');
+const bmiNow = () => (curWeight() / Math.pow(((S.prof && S.prof.h) || 184) / 100, 2)).toFixed(1);
+const fill = s => String(s).replace('{liver}', (curWeight()*0.03).toFixed(1) + ' to ' + (curWeight()*0.05).toFixed(1) + ' kg').replace('{bmi}', bmiNow());
 
 /* ---------- video storage (stays on this phone) ---------- */
 const idb = () => new Promise((res, rej) => { const r = indexedDB.open('sos', 1); r.onupgradeneeded = () => r.result.createObjectStore('files'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
@@ -173,9 +174,9 @@ function bubStyle(d) { const img = S.avatar || S.poster; return d.video ? (img ?
 function renderStoryRow() {
   const decks = availableDecks().sort((a, b) => (isSeen(a) - isSeen(b)) || (a.video ? -1 : 0));
   const n = daysSinceInstall();
-  const locked = D.DECKS.filter(d => n < d.unlock).slice(0, 1);
+  const locked = D.DECKS.filter(d => n < d.unlock).sort((a, b) => a.unlock - b.unlock).slice(0, 1);
   $('#storyRow').innerHTML = decks.map(d => `<button class="st" data-deck="${d.id}"><span class="ring ${isSeen(d)?'seen':''}"><span class="bub" style="${bubStyle(d)}">${d.video?'':d.glyph}</span></span><small>${d.label}</small></button>`).join('') +
-    locked.map(d => `<div class="st locked"><span class="ring lock"><span class="bub" style="background:#13251e;color:#8fb3a2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span></span><small>Tomorrow</small></div>`).join('') +
+    locked.map(d => `<div class="st locked"><span class="ring lock"><span class="bub" style="background:#13251e;color:#8fb3a2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span></span><small>${d.unlock - n === 1 ? 'Tomorrow' : 'In ' + (d.unlock - n) + ' days'}</small></div>`).join('') +
     (videoURL ? '' : `<button class="st" id="addVid"><span class="ring seen"><span class="bub" style="background:#13251e;font-size:26px">+</span></span><small>Add video</small></button>`);
 }
 $('#storyRow').addEventListener('click', e => {
@@ -282,8 +283,8 @@ function startReel(el, list, opts = {}) {
   stopReel();
   activeReel = el;
   const r = list.find(x => x.id === el.dataset.id); if (!r) return;
-  const sc = Object.assign({}, r, {color: reelColor(r, +el.dataset.i), artSVG: r.art && ART[r.art] ? ART[r.art]() : ''});
-  reelCtrl = FX.scene(el.querySelector('.rscene'), sc, {reel:true, tag: r.me ? 'From your own orders' : r.good ? 'Good news' : 'Statutory warning', voice: !opts.silent});
+  const sc = Object.assign({}, r, {big: fill(r.big || ''), body: fill(r.body || ''), color: reelColor(r, +el.dataset.i), artSVG: r.art && ART[r.art] ? ART[r.art]() : ''});
+  reelCtrl = FX.scene(el.querySelector('.rscene'), sc, {reel:true, tag: r.me ? 'From your own orders' : (r.good || r.mood === 'drive') ? 'Good news' : 'Statutory warning', silent: !!opts.silent});
   if (!opts.silent) FX.play(r.mood || 'tense');
   const bar = el.querySelector('.rprog i'); if (bar) { bar.style.animation = 'none'; void bar.offsetWidth; bar.style.animation = ''; }
 }
@@ -332,11 +333,16 @@ function slipDays() { const s = new Set(D.HISTORY); S.slips.forEach(x => s.add(d
 function renderCal() {
   const now = new Date(), today = dkey(now), bad = slipDays();
   const won = new Set(S.urges.filter(u => u.outcome === 'won' || u.outcome === 'real').map(u => dkey(u.at)));
-  let h = '';
-  for (let i = 34; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i), k = dkey(d);
+  const MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const mon = (now.getDay() + 6) % 7; // days since Monday
+  const first = new Date(now.getFullYear(), now.getMonth(), now.getDate() - mon - 28);
+  let h = ['M','T','W','T','F','S','S'].map(d => `<div class="wd">${d}</div>`).join('');
+  for (let i = 0; i < 35; i++) {
+    const d = new Date(first.getFullYear(), first.getMonth(), first.getDate() + i), k = dkey(d);
+    if (k > today) { h += '<div class="cell fut"></div>'; continue; }
     const cls = bad.has(k) ? 'bad' : (k >= D.TRACK0 && k < today) ? 'clean' : '';
-    h += `<div class="cell ${cls} ${k === today ? 'today' : ''}" title="${k}">${d.getDate()}${won.has(k) ? '<em></em>' : ''}</div>`;
+    const lab = d.getDate() === 1 || i === 0 ? `<small>${MO[d.getMonth()]}</small>` : '';
+    h += `<div class="cell ${cls} ${k === today ? 'today' : ''}" title="${k}">${lab}${d.getDate()}${won.has(k) ? '<em></em>' : ''}</div>`;
   }
   $('#cal').innerHTML = h;
 }
@@ -356,13 +362,32 @@ function renderYou() {
   $('#vidStatus').textContent = videoURL ? 'Added. It plays first in every SOS and sits first in your stories. It never leaves this phone.' : 'Not added yet. Save the video from our chat to Photos or Files, then pick it here. It stays on this phone.';
   $('#syncWidget').href = widgetURL(); renderSync();
 }
-function widgetURL() { return 'scriptable:///run/SOS%20Sync?start=' + encodeURIComponent(S.start) + '&best=' + S.best + '&rate=' + D.RATE; }
-$('#copyBackup').onclick = async () => { try { await navigator.clipboard.writeText(JSON.stringify(Object.assign({}, S, {poster:null}))); toast('Backup copied. Paste it into Notes.'); } catch (e) { toast('Copy failed on this phone.'); } };
+function widgetURL() { return 'scriptable:///run/SOS%20Sync?start=' + encodeURIComponent(S.start) + '&best=' + S.best + '&rate=' + D.RATE + '&origin=' + encodeURIComponent(S.origin) + '&debit=' + fundDebit(); }
+/* backup: plain JSON for Notes; compressed text for the weekly row in the SOS sheet */
+const backupState = () => { const o = Object.assign({}, S, {poster:null, avatar:null, syncPending:[]}); delete o.sync; return o; };
+const b64 = buf => { let s = ''; const a = new Uint8Array(buf); for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s); };
+const unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+async function packBackup() {
+  const json = JSON.stringify(backupState());
+  if (!window.CompressionStream) return 'SOS backup json | ' + dkey(new Date()) + '\n' + json;
+  const buf = await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer();
+  return 'SOS backup | ' + dkey(new Date()) + '\n' + b64(buf);
+}
+async function unpackBackup(text) {
+  text = text.trim();
+  const m = text.match(/^SOS backup( json)? \| [\d-]+\s+([\s\S]+)$/);
+  if (!m) return JSON.parse(text);
+  if (m[1]) return JSON.parse(m[2]);
+  const buf = await new Response(new Blob([unb64(m[2].replace(/\s+/g, ''))]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer();
+  return JSON.parse(new TextDecoder().decode(buf));
+}
+$('#copyBackup').onclick = async () => { try { await navigator.clipboard.writeText(JSON.stringify(backupState())); toast('Backup copied. Paste it into Notes.'); } catch (e) { toast('Copy failed on this phone.'); } };
 $('#showRestore').onclick = () => $('#restoreBox').classList.toggle('hide');
-$('#doRestore').onclick = () => {
-  try { const o = JSON.parse($('#restoreText').value); if (!o || !o.start) throw 0; Object.assign(S, o, {poster:S.poster}); save(); renderAll(); toast('Backup restored.'); $('#restoreBox').classList.add('hide'); }
+$('#doRestore').onclick = async () => {
+  try { const o = await unpackBackup($('#restoreText').value); if (!o || !o.start) throw 0; Object.assign(S, o, {poster:S.poster, avatar:S.avatar || o.avatar || null, sync:S.sync}); if (!S.myFoods) S.myFoods = []; if (!S.lastG) S.lastG = {}; buildFood(); migrateFood(); save(); renderAll(); toast('Backup restored.'); $('#restoreBox').classList.add('hide'); }
   catch (e) { toast('That does not look like an SOS backup.'); }
 };
+function maybeBackup() { if (syncCfg() && (!S.lastBackup || Date.now() - new Date(S.lastBackup) > 7*DAY)) queueSync('backup'); }
 
 /* ---------- week, wrapped ---------- */
 function weekDeck() {
@@ -500,7 +525,7 @@ function rewardCard() {
   const ms = streakMs(), n = wavesWon(), nx = D.MILES.find(m => ms < m.h*HR);
   const pool = [
     () => ['Wave count', 'Wave ' + n + ' won', n + (n === 1 ? ' time' : ' times') + ' the craving came and you did not order. Each one weakens the cue for the next.'],
-    () => ['Money kept', rupees(ms / DAY * D.RATE) + ' kept', 'Money that stayed with you since your last order. At this pace, ₹1.5 lakh a year.'],
+    () => ['Money kept', rupees(fundKept()) + ' kept', 'Money that stayed with you instead of going to delivery. At this pace, ₹1.5 lakh a year.'],
     () => { const f = pick(D.FLIPS); return ['Good news', f.big, f.body]; }
   ];
   if (nx) pool.push(() => ['Next unlock', nx.tag + ' is close', 'Unlocks in ' + dur(nx.h*HR - ms) + ': ' + nx.title.toLowerCase() + '.']);
@@ -532,17 +557,20 @@ function slipSheet() {
   let trig = null;
   sheet(`<div class="q">What set it off?</div><p>Logging it is how we find your real triggers. Your streak restarts from now, and comeback mode starts: 24 hours to make it one, not two.</p>
     <div class="chips" id="trig">${D.TRIGGERS.map(t => `<button data-t="${t}">${t}</button>`).join('')}</div>
+    <div class="frm" style="margin-top:14px"><label>What you ordered<input id="slWhat" maxlength="60" placeholder="e.g. Taco Bell, 2 chalupas"></label><label>₹ spent<input id="slSpent" type="number" inputmode="numeric" min="0" placeholder="e.g. 257"></label></div>
+    <p class="mute tiny" style="margin:6px 2px 0">Both optional. The ₹ comes out of your freedom fund instead of a flat ${rupees(D.RATE)}, and goes to Mains Run.</p>
     <div class="two" style="margin-top:16px"><button class="btn dim" id="slCancel">Cancel</button><button class="btn coral" id="slSave" disabled>Log the slip</button></div>`, l => {
       $('#slCancel').onclick = closeSheet;
       $('#trig').onclick = e => { const b = e.target.closest('[data-t]'); if (!b) return; trig = b.dataset.t; $$('#trig button').forEach(x => x.classList.toggle('sel', x === b)); $('#slSave').disabled = false; };
-      $('#slSave').onclick = () => { const second = logSlip(trig); afterSlipSheet(second); };
+      $('#slSave').onclick = () => { const sp = parseInt($('#slSpent').value, 10); const second = logSlip(trig, $('#slWhat').value.trim(), sp > 0 ? sp : 0); afterSlipSheet(second); };
     });
 }
-function logSlip(trigger) {
+function logSlip(trigger, what, spent) {
   const now = new Date(), prev = lastSlip();
   const second = prev && now - new Date(prev.at) < DAY;
   const cur = Math.floor(streakMs() / DAY); if (cur > S.best) S.best = cur;
-  S.slips.push({at: now.toISOString(), trigger}); S.start = now.toISOString(); S.celebrated = 0; save(); queueSync(dkey(now)); renderAll();
+  const sl = {at: now.toISOString(), trigger}; if (what) sl.what = what; if (spent) sl.spent = spent;
+  S.slips.push(sl); S.start = now.toISOString(); S.celebrated = 0; save(); queueSync(dkey(now)); renderAll();
   return second;
 }
 function afterSlipSheet(second) {
@@ -586,7 +614,8 @@ function renderAfter() {
 
 /* ---------- freedom fund ---------- */
 const GO = '<svg class="go" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8fb3a2" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
-function fundKept() { const o = new Date(S.origin), n = S.slips.filter(x => new Date(x.at) >= o).length; return Math.max(0, (Date.now() - o) / DAY * D.RATE - n * D.RATE); }
+const fundDebit = () => { const o = new Date(S.origin); return S.slips.filter(x => new Date(x.at) >= o).reduce((a, x) => a + (x.spent || D.RATE), 0); };
+function fundKept() { return Math.max(0, (Date.now() - new Date(S.origin)) / DAY * D.RATE - fundDebit()); }
 function renderFund() {
   const g = S.fund, k = fundKept(), el = $('#fundCard'); if (!el) return;
   const ic = `<span class="ic" style="background:#3a2a10">${ART.rupee().replace('<svg', '<svg width="28" height="28"')}</span>`;
@@ -601,7 +630,7 @@ function renderFund() {
 function fundSheet() {
   const g = S.fund || {name:'', price:''};
   sheet(`<div class="q">Freedom fund</div>
-    <p>Every clean day adds ${rupees(D.RATE)}, what you spent a day on delivery in November. Every slip takes a day’s worth back out. So far: <b>${rupees(fundKept())}</b>.</p>
+    <p>Every clean day adds ${rupees(D.RATE)}, what you spent a day on delivery in November. Every slip takes out what it cost (or a day’s worth if you didn’t log the ₹). So far: <b>${rupees(fundKept())}</b>.</p>
     <p>Pick something you actually want. Each Sunday, move that week’s amount into a separate account so the money is real.</p>
     <div class="frm" style="grid-template-columns:1fr"><label>What it buys<input id="fName" maxlength="40" placeholder="e.g. new running shoes" value="${esc(g.name)}"></label><label>Price (₹)<input id="fPrice" type="number" inputmode="numeric" min="100" placeholder="e.g. 12000" value="${g.price || ''}"></label></div>
     <div class="two" style="margin-top:16px"><button class="btn dim" id="fOff">${S.fund ? 'Remove goal' : 'Cancel'}</button><button class="btn mint" id="fSave">Save</button></div>`, () => {
@@ -648,16 +677,16 @@ function snapshot(day) {
   const lines = ['SOS | ' + day];
   F.MEALS.forEach(([id, name]) => {
     const its = dayItems(day).filter(x => x.meal === id); if (!its.length) return;
-    lines.push(name + ': ' + its.map(it => { const f = FOOD[it.id]; return f ? f.name + ' (' + fmtQ(it.q) + f.unit + ')' : ''; }).filter(Boolean).join(', '));
+    lines.push(name + ': ' + its.map(it => { const f = FOOD[it.id]; return f ? f.name + ' (' + amountLabel(f, it.g) + ')' : ''; }).filter(Boolean).join(', '));
   });
   const t = totals(day);
-  if (dayItems(day).length) lines.push(`Total: ${Math.round(t.kcal)} kcal · ${Math.round(t.p)} g protein · ${Math.round(t.c)} g carbs · ${Math.round(t.f)} g fat · ${Math.round(t.fib)} g fibre · ${Math.round(t.na)} mg sodium`);
+  if (dayItems(day).length) lines.push(`Total: ${Math.round(t.kcal)} kcal · ${Math.round(t.p)} g protein · ${Math.round(t.c)} g carbs · ${Math.round(t.f)} g fat · ${Math.round(t.fib)} g fibre · ${Math.round(t.na)} mg sodium · ${fmt1(t.zn)} mg zinc`);
   else lines.push('No food logged in SOS.');
   const w = S.weights.find(x => x.d === day); if (w) lines.push('Weight: ' + w.kg + ' kg');
   const urges = S.urges.filter(u => dkey(u.at) === day), won = urges.filter(u => u.outcome === 'won' || u.outcome === 'real').length;
   if (urges.length) lines.push(`Cravings: ${urges.length}, rode out ${won}`);
   const dec = (S.decoys || []).filter(x => dkey(x.at) === day); if (dec.length) lines.push(`Decoy orders: ${dec.length} (${dec.map(x => x.shop).join(', ')}): ${rupees(dec.reduce((a, x) => a + x.total, 0))} not spent, about ${dec.reduce((a, x) => a + x.kcal, 0)} kcal not eaten`);
-  S.slips.filter(x => dkey(x.at) === day).forEach(x => lines.push(`Slip at ${new Date(x.at).toLocaleTimeString('en-IN', {hour:'numeric', minute:'2-digit'})}${x.trigger ? ' (' + x.trigger + ')' : ''}${x.after && x.after.length ? ', 20 min later felt ' + x.after.join(', ').toLowerCase() : ''}`));
+  S.slips.filter(x => dkey(x.at) === day).forEach(x => lines.push(`Slip at ${new Date(x.at).toLocaleTimeString('en-IN', {hour:'numeric', minute:'2-digit'})}${x.trigger ? ' (' + x.trigger + ')' : ''}${x.what ? ': ' + x.what : ''}${x.spent ? ', ' + rupees(x.spent) : ''}${x.after && x.after.length ? ', 20 min later felt ' + x.after.join(', ').toLowerCase() : ''}`));
   if (day === dkey(new Date())) lines.push('Junk-free streak so far: ' + dur(streakMs()));
   return lines.join('\n');
 }
@@ -667,10 +696,10 @@ async function flushSync() {
   syncing = true;
   try {
     for (const day of [...S.syncPending]) {
-      const text = day === 'ping' ? 'SOS connected ' + new Date().toISOString() : snapshot(day);
+      const text = day === 'ping' ? 'SOS connected ' + new Date().toISOString() : day === 'backup' ? await packBackup() : snapshot(day);
       if (text) { const body = new URLSearchParams(); body.append(c.entry, text);
       await fetch('https://docs.google.com/forms/d/e/' + c.form + '/formResponse', {method:'POST', mode:'no-cors', body}); }
-      S.syncPending = S.syncPending.filter(d => d !== day); S.syncLast = new Date().toISOString(); save();
+      S.syncPending = S.syncPending.filter(d => d !== day); S.syncLast = new Date().toISOString(); if (day === 'backup') S.lastBackup = S.syncLast; save();
     }
   } catch (e) { /* offline: stays pending, retried on next open */ }
   syncing = false; renderSync();
@@ -679,6 +708,8 @@ function renderSync() {
   const el = $('#syncStatus'); if (!el) return;
   el.textContent = syncCfg() ? 'Connected. Everything you log here goes to your Mains Run page every night.' + (S.syncLast ? ' Last sent ' + new Date(S.syncLast).toLocaleString('en-IN', {day:'numeric', month:'short', hour:'numeric', minute:'2-digit'}) + '.' : '') + ((S.syncPending || []).length ? ' Waiting for a connection.' : '')
     : 'Not connected. Once it is, everything you log here (food, weight, cravings, slips) goes to your Mains Run page every night, with no taps.';
+  const bk = $('#bkStatus'); if (bk) bk.textContent = syncCfg() ? (S.lastBackup ? 'Backed up to your SOS sheet on ' + new Date(S.lastBackup).toLocaleDateString('en-IN', {day:'numeric', month:'short'}) + '. A fresh one goes every week.' : 'A backup goes to your SOS sheet this week, then every week.') + ' You can also copy one to Notes.' : 'Your streak and history live on this phone. Connect Mains Run above and a backup goes to your SOS sheet every week.';
+  const ss = $('#setSum'); if (ss) ss.textContent = [syncCfg() ? 'Mains Run on' : 'Mains Run off', videoURL ? 'video added' : 'no video', S.lastBackup ? 'backed up' : 'not backed up yet'].join(' · ');
   $('#syncSave').textContent = syncCfg() ? 'Replace' : 'Save';
 }
 $('#syncSave').onclick = () => {
@@ -703,15 +734,15 @@ function eatHTML(focus) {
   focus = focus || [];
   const ks = [...D.KITCHEN].sort((a, b) => (focus.includes(a.id) ? focus.indexOf(a.id) : 99) - (focus.includes(b.id) ? focus.indexOf(b.id) : 99));
   return `<div class="el">
-    <div class="el-vs"><div class="el-good"><h6>What this list gives you</h6><ul>${D.GOOD.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
-    <div class="el-bad"><h6>What the other list does</h6><ul>${D.BAD.map(([t, src]) => `<li>${esc(t)}<small>${esc(src)}</small></li>`).join('')}</ul></div></div>
-    <div class="el-t"><h6>Eat for testosterone and muscle</h6><p>Food can’t push testosterone above normal. Junk, belly fat and short sleep can drag it down, and that’s the part you control.</p>
+    <h5 style="margin-top:4px">Make one right now</h5>${ks.map(k => { const w = D.KWHY[k.id] || ['', '']; return `<button class="el-m${focus.includes(k.id) ? ' top' : ''}" data-rk="${k.id}"><span class="el-ic" style="background:${k.color}">${ART[k.art]().replace('<svg', '<svg width="30" height="30"')}</span><span class="t"><b>${esc(k.name)}</b><small>For ${esc(k.craving.toLowerCase())} · ${k.mins} min · tap for the recipe</small><span class="g">${esc(w[0])}</span><span class="c">${esc(w[1])}</span></span></button>`; }).join('')}
+    <h5>From your orders, these were fine</h5>${D.EAT.map(x => `<div class="el-r"><b>${esc(x.t)}</b><span>${esc(x.d)}</span><span class="g">${esc(D.EATWHY[x.t] || '')}</span></div>`).join('')}
+    <h5>Your everyday foods</h5>${D.EVERYDAY.map(([t, d]) => `<div class="el-r"><b>${esc(t)}${/Protein|Dal|Sabzi|Nuts/.test(t) ? '<i class="tplus">T+</i>' : ''}</b><span>${esc(d)}</span><span class="g">${esc(D.EVERYWHY[t] || '')}</span></div>`).join('')}
+    <div class="el-t" style="margin-top:18px"><h6>Eat for testosterone and muscle</h6><p>Food can’t push testosterone above normal. Junk, belly fat and short sleep can drag it down, and that’s the part you control.</p>
       <ul class="tup">${D.T_UP.map(([a, b]) => `<li><b>${esc(a)}</b><span>${esc(b)}</span></li>`).join('')}</ul>
       <div class="tdn"><b>What drags it down</b><ul>${D.T_DOWN.map(([a, b, c]) => `<li><b>${esc(a)}</b><span>${esc(b)} · ${esc(c)}</span></li>`).join('')}</ul></div>
       <div class="thab"><b>To get jacked:</b> about ${Math.round(1.6 * curWeight() / 5) * 5} g protein a day (1.6 g per kg) · lift heavy 3–4 days a week · sleep 7–9 hours · get your vitamin D tested, low levels are common in India</div></div>
-    <h5>Make one right now</h5>${ks.map(k => { const w = D.KWHY[k.id] || ['', '']; return `<button class="el-m${focus.includes(k.id) ? ' top' : ''}" data-rk="${k.id}"><span class="el-ic" style="background:${k.color}">${ART[k.art]().replace('<svg', '<svg width="30" height="30"')}</span><span class="t"><b>${esc(k.name)}</b><small>For ${esc(k.craving.toLowerCase())} · ${k.mins} min · tap for the recipe</small><span class="g">${esc(w[0])}</span><span class="c">${esc(w[1])}</span></span></button>`; }).join('')}
-    <h5>From your orders, these were fine</h5>${D.EAT.map(x => `<div class="el-r"><b>${esc(x.t)}</b><span>${esc(x.d)}</span><span class="g">${esc(D.EATWHY[x.t] || '')}</span></div>`).join('')}
-    <h5>Your everyday foods</h5>${D.EVERYDAY.map(([t, d]) => `<div class="el-r"><b>${esc(t)}${/Protein|Dal|Sabzi|Nuts/.test(t) ? '<i class="tplus">T+</i>' : ''}</b><span>${esc(d)}</span><span class="g">${esc(D.EVERYWHY[t] || '')}</span></div>`).join('')}</div>`;
+    <div class="el-vs" style="margin-top:18px"><div class="el-good"><h6>What this list gives you</h6><ul>${D.GOOD.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
+    <div class="el-bad"><h6>What the other list does</h6><ul>${D.BAD.map(([t, src]) => `<li>${esc(t)}<small>${esc(src)}</small></li>`).join('')}</ul></div></div></div>`;
 }
 function recipeHTML(id) { const k = D.KITCHEN.find(x => x.id === id), w = D.KWHY[id] || ['', '']; return dishHTML(k, true) + `<div class="el-wb"><span class="g">${esc(w[0])}</span><span class="c">${esc(w[1])}</span></div>`; }
 function cravingSheet() {
@@ -759,10 +790,10 @@ const DECOY_MS = (new URLSearchParams(location.search).get('decoyFast') ? 0.4 : 
 const FO_CATS = [['Tacos', /taco|nacho|chalupa/i, 'chips'], ['Burgers', /burger|whopper|mcchicken|mcaloo|sandwich/i, 'burger'], ['Fried chicken', /nugget|popcorn|wings|strips|zinger|chicken burger/i, 'drum'], ['Shakes', /shake/i, 'glass'], ['Ice cream', /ice cream|scoop/i, 'cup'], ['Chips', /chips|lay's|doritos|puffs|namkeen|cornitos/i, 'chips'], ['Chinese', /noodles|chilli|chopsuey|honey|spring roll/i, 'bowl'], ['Coffee', /latte|coffee/i, 'glass'], ['Cakes', /cake|brownie|cookie|minibon|churros|milano/i, 'cup']];
 const NV = /chicken|nugget|fish|zinger|whopper|mcchicken|salami|seekh|wings|popcorn|chalupa|chipotle/i;
 const SUGR = /shake|ice cream|cake|brownie|cookie|minibon|churros|milano|nimbooz|limca|pepsi|latte|go zero/i, FRYR = /nugget|popcorn|wings|strips|zinger|chalupa|crispy|fried|fish n chips|twists|chips|nachos|doritos|namkeen|vada|tikki|spring roll|honey chilli potato|chilly paneer|chilli chicken|mcaloo|mcchicken|mayo burst|bold chicken|hot garlic|puffs/i;
-const tTag = n => SUGR.test(n) ? '<span class="tg">Sugar load · testosterone ↓</span>' : FRYR.test(n) ? '<span class="tg">Deep-fried · trans fats · testosterone ↓</span>' : '';
+const tTag = n => SUGR.test(n) ? '<span class="tg">Sugar load · <span class="nw">testosterone ↓</span></span>' : FRYR.test(n) ? '<span class="tg">Deep-fried · trans fats · <span class="nw">testosterone ↓</span></span>' : '';
 const PAST_NAMES = new Set(D.PAST.flatMap(o => o.items));
 let fo = {cart: null, cat: null, q: '', timer: 0, factI: 0};
-const itemArt = (n, k) => /shake|latte|soda|nimbooz|limca|pepsi/i.test(n) ? 'glass' : /ice cream|cake|brownie|cookie|minibon|churros|milano|go zero/i.test(n) ? 'cup' : /nugget|popcorn|wings|strips|zinger|fish/i.test(n) ? 'drum' : /burger|whopper|mcchicken|mcaloo|sandwich|vada pav|pizza|wrap/i.test(n) ? 'burger' : /sauce|dip$|ketchup/i.test(n) ? 'jar' : /noodles|chilli|chopsuey|roll|potato/i.test(n) ? 'bowl' : /nacho|chips|lay's|doritos|puffs|namkeen|taco|chalupa|twists/i.test(n) ? 'chips' : k;
+const itemArt = (n, k) => /shake|latte|soda|nimbooz|limca|pepsi/i.test(n) ? 'glass' : /ice cream|cake|brownie|cookie|minibon|churros|milano|go zero/i.test(n) ? 'cup' : /nacho|chips|lay's|doritos|puffs|namkeen|taco|chalupa|twists/i.test(n) ? 'chips' : /nugget|popcorn|wings|strips|zinger|fish/i.test(n) ? 'drum' : /burger|whopper|mcchicken|mcaloo|sandwich|vada pav|pizza|wrap/i.test(n) ? 'burger' : /sauce|dip$|ketchup/i.test(n) ? 'jar' : /noodles|chilli|chopsuey|roll|potato/i.test(n) ? 'bowl' : k;
 const art = (k, size) => (ART[k] || ART.burger)().replace('<svg', `<svg width="${size}" height="${size}"`);
 const icon = {
   x: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1b1e1c" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
@@ -877,7 +908,7 @@ function foFacts() {
   const cnt = d.items.reduce((a, [, q]) => a + q, 0);
   f.push({t: `${rupees(d.total)} for ${cnt} item${cnt > 1 ? 's' : ''} that would be gone in 10 minutes.`, s: 'Your order history: about ₹10,000 in 24 days of November'});
   D.T_DOWN.forEach(([a, b, c]) => f.push({t: `${a}: ${b.charAt(0).toLowerCase() + b.slice(1)}.`, s: c}));
-  D.HARD.slice(3).forEach(h => f.push({t: h.t, s: h.s}));
+  D.HARD.slice(3).forEach(h => f.push({t: fill(h.t), s: h.s}));
   return f;
 }
 function foTrack() {
@@ -953,17 +984,42 @@ function checkMilestones() {
   }
 }
 
-/* ---------- food logger ---------- */
+/* ---------- food logger (everything in grams) ---------- */
 const F = window.SOS_FOODS;
-const FOOD = Object.fromEntries(F.FOODS.map(f => [f.id, f]));
+let FOOD = {};
+function buildFood() { FOOD = Object.fromEntries(F.FOODS.concat(S.myFoods || []).map(f => [f.id, f])); }
+if (!S.myFoods) S.myFoods = [];
+buildFood();
+// One-time move from "servings" to grams, so nothing logged before is lost.
+function migrateFood() {
+  if (S.foodV === 2) return;
+  Object.values(S.food || {}).forEach(list => list.forEach(it => { if (it.g == null) { const f = FOOD[it.id]; it.g = Math.round((it.q || 1) * (F.LEGACY_G[it.id] || (f ? f.units[0][1] : 100))); delete it.q; } }));
+  S.foodV = 2; save();
+}
+migrateFood();
+if (!S.lastG) S.lastG = {};
 let fDay = 0; // days back from today
 const fKey = () => { const n = new Date(); return dkey(new Date(n.getFullYear(), n.getMonth(), n.getDate() - fDay)); };
 const dayItems = k => (S.food[k] || []);
 const fmt1 = x => (Math.round(x*10)/10).toString();
-const fmtQ = q => q === 1 ? '' : fmt1(q) + ' × ';
+const NUTS = ['kcal','p','c','f','fib','na','k','ca','fe','vc','zn'];
+const nut = (f, g, k) => (f[k] || 0) * g / 100;
+const PLURAL = {egg:'eggs', white:'whites', slice:'slices', bowl:'bowls', plate:'plates', glass:'glasses', cup:'cups', scoop:'scoops', 'level scoop':'level scoops', omelette:'omelettes', half:'halves', handful:'handfuls', bottle:'bottles', bar:'bars', wafer:'wafers', pack:'packs', piece:'pieces', serving:'servings', 'regular bowl':'regular bowls'};
+function unitName(label, n) {
+  if (Math.abs(n - 1) < 0.01) return label;
+  const m = label.match(/^([a-z][a-z ]*?)(\s*\(.*\))?$/i); if (!m) return label;
+  return (PLURAL[m[1].trim()] || m[1].trim()) + (m[2] || '');
+}
+const fmtCount = n => { const q = Math.round(n * 4) / 4; return Math.abs(n - q) < 0.04 ? String(+q.toFixed(2)) : n.toFixed(1); };
+function countLabel(f, g) {
+  const u = f.units[0], n = g / u[1];
+  if (Math.abs(n * 4 - Math.round(n * 4)) > 0.04) return '';
+  return /^\d/.test(u[0]) ? fmtCount(n) + ' × ' + u[0] : fmtCount(n) + ' ' + unitName(u[0], n);
+}
+function amountLabel(f, g) { const c = countLabel(f, g); return (c ? c + ' · ' : '') + Math.round(g) + ' g'; }
 function totals(k) {
-  const t = {kcal:0, p:0, c:0, f:0, fib:0, na:0, k:0, ca:0, fe:0, vc:0};
-  dayItems(k).forEach(it => { const f = FOOD[it.id]; if (!f) return; for (const x in t) t[x] += (f[x] || 0) * it.q; });
+  const t = Object.fromEntries(NUTS.map(x => [x, 0]));
+  dayItems(k).forEach(it => { const f = FOOD[it.id]; if (f) NUTS.forEach(x => t[x] += nut(f, it.g, x)); });
   return t;
 }
 function targets() {
@@ -977,12 +1033,13 @@ function targets() {
   const c = Math.max(0, Math.round((kcal - p*4 - f*9)/4));
   return {bmr:Math.round(bmr), tdee:Math.round(tdee), kcal, p, f, c};
 }
+const microRef = (m, T) => m.per2000 ? Math.round(m.ref * (T ? T.kcal : 2000) / 2000) : m.ref;
 function bar(pct, col) { return `<div class="track"><i style="width:${Math.min(100, Math.max(0, pct*100)).toFixed(1)}%;background:${col}"></i></div>`; }
 function renderTCard(k, t, T) {
   const names = dayItems(k).map(it => (FOOD[it.id] || {}).name || '').join(' | ');
   const checks = [
     ['Whole eggs', /whole egg|omelette/i.test(names)],
-    ['Zinc: meat or chana', /mutton|chicken|kala chana|rajma|chana|soya/i.test(names)],
+    [`Zinc ${fmt1(t.zn)} / 17 mg`, t.zn >= 17],
     ['Healthy fat: nuts or avocado', /almond|walnut|avocado/i.test(names)],
     ['Greens', /saag|palak/i.test(names)],
     ['Fish', /fish/i.test(names)],
@@ -991,84 +1048,187 @@ function renderTCard(k, t, T) {
   const lowFat = t.kcal > 800 && t.f * 9 / t.kcal < 0.2;
   $('#tCard').innerHTML = `<div class="tcard"><div class="tc-h"><b>Testosterone foods today</b><span>${checks.filter(c => c[1]).length} of ${checks.length}</span></div><div class="tc-chips">${checks.map(([n, ok]) => `<span class="${ok ? 'ok' : ''}">${ok ? '✓ ' : ''}${esc(n)}</span>`).join('')}</div>${lowFat ? '<p class="tc-w">Fat is under 20% of today’s calories. Low-fat eating cuts testosterone 10–15%: add eggs, nuts or a little ghee.</p>' : ''}</div>`;
 }
+const isPlateMeal = id => id === 'lunch' || id === 'dinner';
 function renderFood() {
   const k = fKey(), t = totals(k), T = targets();
   $('#dLabel').textContent = fDay === 0 ? 'Today' : fDay === 1 ? 'Yesterday' : new Date(k).toLocaleDateString('en-IN', {weekday:'short', day:'numeric', month:'short'});
   $('#dNext').disabled = fDay === 0;
-  // calorie ring
   const C = 2*Math.PI*52, pct = T ? t.kcal / T.kcal : 0, over = T && t.kcal > T.kcal;
   $('#kRing').innerHTML = `<circle cx="60" cy="60" r="52" fill="none" stroke="#1f362c" stroke-width="10"/><circle cx="60" cy="60" r="52" fill="none" stroke="${over ? '#ff6b57' : '#7ef0b5'}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C*(1-Math.min(1, pct))).toFixed(1)}"/>`;
   if (T) { $('#kBig').textContent = Math.abs(Math.round(T.kcal - t.kcal)).toLocaleString('en-IN'); $('#kLab').textContent = over ? 'kcal over' : 'kcal left of ' + T.kcal.toLocaleString('en-IN'); }
   else { $('#kBig').textContent = Math.round(t.kcal).toLocaleString('en-IN'); $('#kLab').textContent = 'kcal eaten'; }
-  const M = [['Protein', t.p, T && T.p, '#7ef0b5'], ['Carbs', t.c, T && T.c, '#ffd166'], ['Fat', t.f, T && T.f, '#ff9b85'], ['Fibre', t.fib, 30, '#9fd8bd']];
+  const fibRef = microRef(F.MICROS[0], T);
+  const M = [['Protein', t.p, T && T.p, '#7ef0b5'], ['Carbs', t.c, T && T.c, '#ffd166'], ['Fat', t.f, T && T.f, '#ff9b85'], ['Fibre', t.fib, fibRef, '#9fd8bd']];
   $('#macros').innerHTML = M.map(([n, v, tg, col]) => `<div class="mb"><div><span>${n}</span><b>${Math.round(v)}${tg ? ' / ' + tg : ''} g</b></div>${bar(tg ? v/tg : 0, col)}</div>`).join('');
   renderTCard(k, t, T);
   $('#fNote').innerHTML = T ? '' : `<div class="note">Add your age in <b>Targets</b> below and I’ll work out your calories, protein, carbs and fat from your weight (${curWeight()} kg) and height (${S.prof.h} cm).</div>`;
-  // meals
   $('#meals').innerHTML = F.MEALS.map(([id, name]) => {
-    const items = dayItems(k).map((it, i) => ({it, i})).filter(x => x.it.meal === id);
-    const kc = items.reduce((s, x) => s + (FOOD[x.it.id] ? FOOD[x.it.id].kcal * x.it.q : 0), 0);
+    const items = dayItems(k).map((it, i) => ({it, i})).filter(x => x.it.meal === id && FOOD[x.it.id]);
+    const kc = items.reduce((s, x) => s + nut(FOOD[x.it.id], x.it.g, 'kcal'), 0);
     const tpl = F.TEMPLATES.filter(tp => tp.meal === id);
+    let empty = '';
+    if (!items.length) {
+      if (isPlateMeal(id)) empty = `<div class="tpl"><button class="tpl-main" data-plate="${id}">Build my plate</button><button data-copy="${id}">Same as yesterday</button></div>`;
+      else if (tpl.length) empty = '<div class="tpl">' + tpl.map(tp => `<button data-tpl="${tp.id}">+ ${tp.name}</button>`).join('') + `<button data-copy="${id}">Same as yesterday</button></div>`;
+      else empty = `<div class="tpl"><button data-copy="${id}">Same as yesterday</button></div>`;
+    }
     return `<div class="meal"><div class="mh"><div><b>${name}</b> <span>${items.length ? Math.round(kc) + ' kcal' : ''}</span></div><button class="addb" data-add="${id}">+ Add</button></div>
-      ${items.map(({it, i}) => { const f = FOOD[it.id]; if (!f) return ''; return `<div class="fi"><button class="nm" data-edit="${i}"><b>${esc(f.name)}${f.pk ? '<span class="pk">Packaged</span>' : ''}</b><span>${fmtQ(it.q)}${esc(f.unit)}</span></button><div class="kc">${Math.round(f.kcal*it.q)} kcal<small>${fmt1(f.p*it.q)} g protein</small></div><button class="rm" data-rm="${i}" aria-label="Remove ${esc(f.name)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>`; }).join('')}
-      ${!items.length && tpl.length ? '<div class="tpl">' + tpl.map(tp => `<button data-tpl="${tp.id}">+ ${tp.name}</button>`).join('') + '</div>' : ''}
-      ${!items.length && !tpl.length ? `<div class="tpl"><button data-copy="${id}">Same as yesterday</button></div>` : ''}</div>`;
+      ${items.map(({it, i}) => { const f = FOOD[it.id]; return `<div class="fi"><button class="nm" data-edit="${i}"><b>${esc(f.name)}${f.pk ? '<span class="pk">Packaged</span>' : ''}</b><span>${esc(amountLabel(f, it.g))}</span></button><div class="kc">${Math.round(nut(f, it.g, 'kcal'))} kcal<small>${fmt1(nut(f, it.g, 'p'))} g protein</small></div><button class="rm" data-rm="${i}" aria-label="Remove ${esc(f.name)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>`; }).join('')}
+      ${empty}</div>`;
   }).join('');
-  // micros
-  $('#micros').innerHTML = F.MICROS.map(m => { const v = t[m.k], p = v / m.ref, bad = m.limit && v > m.ref; return `<div class="mi"><span>${m.name}</span>${bar(p, m.limit ? (bad ? '#ff6b57' : '#ffd166') : '#7ef0b5')}<b style="color:${bad ? 'var(--coral)' : 'inherit'}">${Math.round(v).toLocaleString('en-IN')} / ${m.ref.toLocaleString('en-IN')} ${m.unit}</b></div>`; }).join('');
+  $('#micros').innerHTML = F.MICROS.map(m => { const ref = microRef(m, T), v = t[m.k], p = v / ref, bad = m.limit && v > ref; return `<div class="mi"><span>${m.name}${m.t ? '<i class="tplus">T</i>' : ''}</span>${bar(p, m.limit ? (bad ? '#ff6b57' : '#ffd166') : '#7ef0b5')}<b style="color:${bad ? 'var(--coral)' : 'inherit'}">${(v < 10 && m.unit === 'mg' ? fmt1(v) : Math.round(v).toLocaleString('en-IN'))} / ${ref.toLocaleString('en-IN')} ${m.unit}</b></div>`; }).join('');
   renderWeight(); renderTargets();
 }
-function addItems(meal, list) { const k = fKey(); S.food[k] = dayItems(k).concat(list.map(([id, q]) => ({meal, id, q}))); save(); queueSync(k); renderFood(); renderFoodCard(); }
+function addItems(meal, list) {
+  const k = fKey();
+  S.food[k] = dayItems(k).concat(list.map(([id, g]) => ({meal, id, g: Math.round(g)})));
+  list.forEach(([id, g]) => S.lastG[id] = Math.round(g));
+  save(); queueSync(k); renderFood(); renderFoodCard();
+}
 $('#meals').addEventListener('click', e => {
   const k = fKey(), b = e.target.closest('button'); if (!b) return;
   if (b.dataset.add) addSheet(b.dataset.add);
-  else if (b.dataset.tpl) { const tp = F.TEMPLATES.find(x => x.id === b.dataset.tpl); addItems(tp.meal, tp.items); toast(tp.name + ' logged.'); }
-  else if (b.dataset.copy) { const n = new Date(); const y = dkey(new Date(n.getFullYear(), n.getMonth(), n.getDate() - fDay - 1)); const src = (S.food[y] || []).filter(x => x.meal === b.dataset.copy); if (!src.length) { toast('Nothing logged for that meal yesterday.'); return; } addItems(b.dataset.copy, src.map(x => [x.id, x.q])); }
+  else if (b.dataset.plate) plateSheet(b.dataset.plate);
+  else if (b.dataset.tpl) { const tp = F.TEMPLATES.find(x => x.id === b.dataset.tpl); addItems(tp.meal, tp.items); toast(tp.name + ' logged. Tap any item to change the amount.'); }
+  else if (b.dataset.copy) { const n = new Date(); const y = dkey(new Date(n.getFullYear(), n.getMonth(), n.getDate() - fDay - 1)); const src = (S.food[y] || []).filter(x => x.meal === b.dataset.copy && FOOD[x.id]); if (!src.length) { toast('Nothing logged for that meal the day before.'); return; } addItems(b.dataset.copy, src.map(x => [x.id, x.g])); }
   else if (b.dataset.rm) { S.food[k].splice(+b.dataset.rm, 1); save(); queueSync(k); renderFood(); renderFoodCard(); }
   else if (b.dataset.edit) editSheet(+b.dataset.edit);
 });
 $('#dPrev').onclick = () => { fDay++; renderFood(); };
 $('#dNext').onclick = () => { if (fDay > 0) fDay--; renderFood(); };
-function qtyPanel(f, q, label) {
-  return `<div class="qty"><b>${esc(f.name)}${f.pk ? '<span class="pk">Packaged</span>' : ''}</b><span class="mute" style="font-size:13px">${esc(f.unit)} · ${f.kcal} kcal · ${f.p} g protein</span>
-    <div class="row"><button class="stp" data-d="-0.5" aria-label="Less">−</button><span class="qv" id="qv">${fmt1(q)}</span><button class="stp" data-d="0.5" aria-label="More">+</button><button class="btn mint" id="qOk" style="margin-left:auto">${label}</button></div>
-    <div class="sum" id="qsum">${Math.round(f.kcal*q)} kcal · ${fmt1(f.p*q)} g protein · ${fmt1(f.c*q)} g carbs · ${fmt1(f.f*q)} g fat</div></div>`;
+
+/* amount control: units and grams, kept in step */
+const unitStep = f => f.units[0][1] < 60 ? 1 : 0.5;
+const defaultG = f => S.lastG[f.id] || f.units[0][1] * (/roti/i.test(f.name) ? 2 : 1);
+function amtRow(f, g) {
+  return `<div class="amt" data-amt="${f.id}"><button class="stp" data-d="-1" aria-label="Less">−</button><span class="qv"><b>${fmtCount(g / f.units[0][1])}</b><small>${esc(unitName(f.units[0][0], g / f.units[0][1]))}</small></span><button class="stp" data-d="1" aria-label="More">+</button><label class="gin"><input type="number" inputmode="decimal" min="1" max="3000" value="${Math.round(g)}" aria-label="${esc(f.name)} in grams"><span>g</span></label></div>`;
 }
-function bindQty(f, q0, onOk) {
-  let q = q0;
-  $$('.qty .stp').forEach(s => s.onclick = () => { q = Math.max(0.5, Math.round((q + +s.dataset.d)*2)/2); $('#qv').textContent = fmt1(q); $('#qsum').textContent = `${Math.round(f.kcal*q)} kcal · ${fmt1(f.p*q)} g protein · ${fmt1(f.c*q)} g carbs · ${fmt1(f.f*q)} g fat`; });
-  $('#qOk').onclick = () => onOk(q);
+// Wires every amount row inside root. get(id) returns grams, set(id, g) stores them, after() runs on each change.
+function wireAmt(root, get, set, after) {
+  root.addEventListener('click', e => {
+    const b = e.target.closest('.stp'); if (!b) return; const row = b.closest('[data-amt]'), f = FOOD[row.dataset.amt]; if (!f) return;
+    const u = f.units[0][1], st = unitStep(f), n = get(f.id) / u;
+    const next = Math.max(st, (+b.dataset.d > 0 ? Math.floor(n / st + 1e-6) + 1 : Math.ceil(n / st - 1e-6) - 1) * st);
+    set(f.id, next * u); paintAmt(row, f, next * u, true); after && after();
+  });
+  root.addEventListener('input', e => {
+    const inp = e.target.closest('.gin input'); if (!inp) return; const row = inp.closest('[data-amt]'), f = FOOD[row.dataset.amt]; if (!f) return;
+    const v = parseFloat(inp.value); if (!(v > 0)) return; set(f.id, v); paintAmt(row, f, v, false); after && after();
+  });
 }
-function addSheet(meal) {
+function paintAmt(row, f, g, setInput) {
+  const n = g / f.units[0][1];
+  row.querySelector('.qv b').textContent = fmtCount(n); row.querySelector('.qv small').textContent = unitName(f.units[0][0], n);
+  if (setInput) row.querySelector('.gin input').value = Math.round(g);
+}
+const sumLine = (f, g) => `${Math.round(nut(f, g, 'kcal'))} kcal · ${fmt1(nut(f, g, 'p'))} g protein · ${fmt1(nut(f, g, 'c'))} g carbs · ${fmt1(nut(f, g, 'f'))} g fat`;
+function amtPanel(f, g, label, extra) {
+  const u = f.units[0];
+  return `<div class="qty"><b>${esc(f.name)}${f.pk ? '<span class="pk">Packaged</span>' : ''}</b><span class="mute" style="font-size:13px">1 ${esc(u[0])} = ${u[1]} g · ${Math.round(f.kcal*u[1]/100)} kcal · ${fmt1(f.p*u[1]/100)} g protein${f.note ? ' · ' + esc(f.note) : ''}</span>
+    ${amtRow(f, g)}<div class="sum" id="qsum">${sumLine(f, g)}</div><button class="btn mint full" id="qOk">${label}</button>${extra || ''}</div>`;
+}
+function bindAmtPanel(root, f, g0, onOk) {
+  let g = g0;
+  wireAmt(root.querySelector('.qty'), () => g, (id, v) => { g = v; }, () => { $('#qsum').textContent = sumLine(f, g); });
+  $('#qOk').onclick = () => onOk(g);
+}
+function foodUsage() { const c = {}; Object.values(S.food).forEach(l => l.forEach(it => c[it.id] = (c[it.id] || 0) + 1)); return c; }
+function recentIds() {
+  const out = []; Object.keys(S.food).sort().reverse().forEach(k => S.food[k].slice().reverse().forEach(it => { if (FOOD[it.id] && !FOOD[it.id].hidden && !out.includes(it.id)) out.push(it.id); }));
+  return out.slice(0, 10);
+}
+function addSheet(meal, openId) {
   const mealName = F.MEALS.find(m => m[0] === meal)[1];
-  const cats = ['All'].concat([...new Set(F.FOODS.map(f => f.cat))]);
-  let cat = 'All', q = '';
+  const recent = recentIds();
+  const cats = (recent.length ? ['Recent'] : []).concat(['All'], [...new Set(F.FOODS.map(f => f.cat))], S.myFoods.some(f => !f.hidden) ? ['My foods'] : []);
+  let cat = cats[0], q = '';
   sheet(`<div class="q" style="font-size:26px;margin-bottom:10px">Add to ${mealName}</div>
+    ${isPlateMeal(meal) ? `<button class="btn mint full" id="toPlate" style="margin-bottom:12px">Build my plate</button>` : ''}
     <input class="srch" id="fSearch" type="search" placeholder="Search your foods" aria-label="Search foods">
-    <div class="cats" id="fCats">${cats.map(c => `<button data-c="${c}" class="${c === 'All' ? 'sel' : ''}">${c}</button>`).join('')}</div>
+    <div class="cats" id="fCats">${cats.map((c, i) => `<button data-c="${c}" class="${i ? '' : 'sel'}">${c}</button>`).join('')}</div>
     <div id="fQty"></div><div class="flist" id="fList"></div>
+    <button class="btn dim full" id="toCustom" style="margin-top:12px">Not on the list? Add your own food</button>
     <button class="btn dim full" id="shClose">Done</button>`, () => {
+      const pool = () => Object.values(FOOD).filter(f => !f.hidden);
       const list = () => {
         const s = q.trim().toLowerCase();
-        const fs = F.FOODS.filter(f => (cat === 'All' || f.cat === cat) && (!s || f.name.toLowerCase().includes(s)));
-        $('#fList').innerHTML = fs.map(f => `<div class="fi"><button class="nm" data-f="${f.id}"><b>${esc(f.name)}${f.pk ? '<span class="pk">Packaged</span>' : ''}</b><span>${esc(f.unit)}</span></button><div class="kc">${f.kcal} kcal<small>${f.p} g protein</small></div></div>`).join('') || '<p class="mute">No match.</p>';
+        let fs = s ? pool().filter(f => f.name.toLowerCase().includes(s)) : cat === 'Recent' ? recent.map(id => FOOD[id]) : cat === 'All' ? pool() : cat === 'My foods' ? S.myFoods.filter(f => !f.hidden) : pool().filter(f => f.cat === cat);
+        $('#fList').innerHTML = fs.map(f => `<div class="fi"><button class="nm" data-f="${f.id}"><b>${esc(f.name)}${f.pk ? '<span class="pk">Packaged</span>' : ''}</b><span>1 ${esc(f.units[0][0])} · ${f.units[0][1]} g</span></button><div class="kc">${Math.round(f.kcal * f.units[0][1] / 100)} kcal<small>${fmt1(f.p * f.units[0][1] / 100)} g protein</small></div></div>`).join('') || '<p class="mute">No match. Add it as your own food below.</p>';
       };
       list();
       $('#fSearch').oninput = e => { q = e.target.value; list(); };
       $('#fCats').onclick = e => { const b = e.target.closest('[data-c]'); if (!b) return; cat = b.dataset.c; $$('#fCats button').forEach(x => x.classList.toggle('sel', x === b)); list(); };
       $('#fList').onclick = e => {
         const b = e.target.closest('[data-f]'); if (!b) return; const f = FOOD[b.dataset.f];
-        $('#fQty').innerHTML = qtyPanel(f, 1, 'Add');
-        bindQty(f, 1, qq => { addItems(meal, [[f.id, qq]]); $('#fQty').innerHTML = ''; toast(f.name + ' added to ' + mealName.toLowerCase() + '.'); });
+        $('#fQty').innerHTML = amtPanel(f, defaultG(f), 'Add to ' + mealName.toLowerCase(), f.mine ? `<button class="btn dim full" id="qDel" style="margin-top:8px">Delete this food from my list</button>` : '');
+        bindAmtPanel($('#fQty'), f, defaultG(f), g => { addItems(meal, [[f.id, g]]); $('#fQty').innerHTML = ''; toast(f.name + ' added to ' + mealName.toLowerCase() + '.'); });
+        const del = $('#qDel'); if (del) del.onclick = () => { f.hidden = true; save(); buildFood(); $('#fQty').innerHTML = ''; list(); toast('Removed from your list.'); };
         $('#fQty').scrollIntoView({behavior:'smooth', block:'nearest'});
       };
+      const tp = $('#toPlate'); if (tp) tp.onclick = () => plateSheet(meal);
+      $('#toCustom').onclick = () => customSheet(meal);
       $('#shClose').onclick = closeSheet;
+      if (openId) { const c = [...$$('#fCats button')].find(x => x.dataset.c === 'My foods'); if (c) c.click(); const it = $(`[data-f="${openId}"]`); if (it) it.click(); }
+    });
+}
+function plateSheet(meal) {
+  const mealName = F.MEALS.find(m => m[0] === meal)[1], use = foodUsage();
+  const byUse = (a, b) => (use[b.id] || 0) - (use[a.id] || 0);
+  const mains = F.FOODS.filter(f => f.kind === 'main').concat(S.myFoods.filter(f => !f.hidden)).sort(byUse);
+  const sides = F.FOODS.filter(f => f.kind === 'side').sort(byUse);
+  const sel = new Map();
+  const chip = f => `<button data-pick="${f.id}">${esc(f.name)}</button>`;
+  sheet(`<div class="q" style="font-size:26px">Your ${mealName.toLowerCase()}</div><p class="mute" style="margin-top:-4px">Pick what was made at home and what you had with it. Amounts start at what you usually have; change them by portion or in grams.</p>
+    <h4 class="plh">Made at home</h4><div class="chips pl" id="plMain">${mains.map(chip).join('')}</div>
+    <h4 class="plh">With it</h4><div class="chips pl" id="plSide">${sides.map(chip).join('')}</div>
+    <div id="plRows"></div><div style="height:84px"></div>
+    <div class="plbar"><div id="plTot">Pick what you ate</div><button class="btn mint" id="plOk" disabled>Log</button></div>`, l => {
+      const rows = $('#plRows');
+      const paintTot = () => {
+        let t = {kcal:0, p:0, c:0, f:0}; sel.forEach((g, id) => ['kcal','p','c','f'].forEach(k => t[k] += nut(FOOD[id], g, k)));
+        $('#plTot').innerHTML = sel.size ? `<b>${Math.round(t.kcal)} kcal</b><span>${Math.round(t.p)} g protein · ${Math.round(t.c)} g carbs · ${Math.round(t.f)} g fat</span>` : 'Pick what you ate';
+        $('#plOk').disabled = !sel.size;
+        rows.querySelectorAll('[data-row]').forEach(r => { const id = r.dataset.row; r.querySelector('.plk').textContent = Math.round(nut(FOOD[id], sel.get(id), 'kcal')) + ' kcal · ' + fmt1(nut(FOOD[id], sel.get(id), 'p')) + ' g protein'; });
+      };
+      const paintRows = () => { rows.innerHTML = [...sel.keys()].map(id => { const f = FOOD[id]; return `<div class="plr" data-row="${id}"><div class="plt"><b>${esc(f.name)}</b><span class="plk"></span></div>${amtRow(f, sel.get(id))}</div>`; }).join(''); paintTot(); };
+      l.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { const id = b.dataset.pick; if (sel.has(id)) sel.delete(id); else sel.set(id, defaultG(FOOD[id])); b.classList.toggle('sel', sel.has(id)); paintRows(); });
+      wireAmt(rows, id => sel.get(id), (id, g) => sel.set(id, g), paintTot);
+      $('#plOk').textContent = 'Log to ' + mealName.toLowerCase();
+      $('#plOk').onclick = () => { addItems(meal, [...sel.entries()]); closeSheet(); toast(mealName + ' logged.'); };
+    });
+}
+function customSheet(meal) {
+  sheet(`<div class="q" style="font-size:26px">Add your own food</div><p class="mute" style="margin-top:-4px">Copy the numbers from the pack’s label, or a trusted source. It stays in your list for next time.</p>
+    <div class="frm" style="grid-template-columns:1fr">
+      <label>Name<input id="cName" maxlength="40" placeholder="e.g. Besan chilla"></label>
+      <label>The numbers below are for<select id="cBasis"><option value="100">100 g (as on most labels)</option><option value="serv">One serving</option></select></label>
+      <div id="cServ" class="hide" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><label>Serving name<input id="cSName" maxlength="20" placeholder="chilla"></label><label>Serving weight, g<input id="cSG" type="number" inputmode="decimal" min="1" placeholder="80"></label></div>
+    </div>
+    <div class="frm"><label>Calories, kcal<input id="cK" type="number" inputmode="decimal" min="0"></label><label>Protein, g<input id="cP" type="number" inputmode="decimal" min="0"></label><label>Carbs, g<input id="cC" type="number" inputmode="decimal" min="0"></label><label>Fat, g<input id="cF" type="number" inputmode="decimal" min="0"></label><label>Fibre, g (optional)<input id="cFi" type="number" inputmode="decimal" min="0"></label><label>Sodium, mg (optional)<input id="cNa" type="number" inputmode="decimal" min="0"></label></div>
+    <div class="two" style="margin-top:16px"><button class="btn dim" id="cBack">Back</button><button class="btn mint" id="cSave">Save and add</button></div>`, () => {
+      $('#cBasis').onchange = () => $('#cServ').classList.toggle('hide', $('#cBasis').value !== 'serv');
+      $('#cBack').onclick = () => addSheet(meal);
+      $('#cSave').onclick = () => {
+        const name = $('#cName').value.trim(), serv = $('#cBasis').value === 'serv', sg = parseFloat($('#cSG').value), num = id => { const v = parseFloat($(id).value); return v >= 0 ? v : 0; };
+        const kcal = num('#cK'), p = num('#cP'), c = num('#cC'), fat = num('#cF');
+        if (!name) { toast('Give it a name.'); return; }
+        if (serv && !(sg > 0)) { toast('Add how many grams one serving weighs.'); return; }
+        if (!(kcal > 0) && !(p > 0)) { toast('Add at least the calories.'); return; }
+        const base = serv ? sg : 100, k = 100 / base;
+        const f = {id: 'my-' + Date.now().toString(36), name, cat: 'My foods', mine: true, kind: '', note: 'your own entry', pk: false,
+          units: [[serv ? ($('#cSName').value.trim() || 'serving') : '100 g', serv ? sg : 100]],
+          kcal: kcal*k, p: p*k, c: c*k, f: fat*k, fib: num('#cFi')*k, na: num('#cNa')*k, k: 0, ca: 0, fe: 0, vc: 0, zn: 0};
+        if (!serv) f.units = [['serving (100 g)', 100]];
+        S.myFoods.push(f); save(); buildFood();
+        addSheet(meal, f.id);
+      };
     });
 }
 function editSheet(i) {
   const k = fKey(), it = S.food[k][i], f = FOOD[it.id];
-  sheet(`<div class="q" style="font-size:26px">Change amount</div>${qtyPanel(f, it.q, 'Save')}<button class="btn dim full" id="shClose">Cancel</button>`, () => {
-    bindQty(f, it.q, qq => { it.q = qq; save(); queueSync(k); closeSheet(); renderFood(); renderFoodCard(); });
+  sheet(`<div class="q" style="font-size:26px">Change amount</div>${amtPanel(f, it.g, 'Save', `<button class="btn dim full" id="eDel" style="margin-top:8px">Remove from ${F.MEALS.find(m => m[0] === it.meal)[1].toLowerCase()}</button>`)}<button class="btn dim full" id="shClose">Cancel</button>`, l => {
+    bindAmtPanel(l, f, it.g, g => { it.g = Math.round(g); S.lastG[f.id] = it.g; save(); queueSync(k); closeSheet(); renderFood(); renderFoodCard(); });
+    $('#eDel').onclick = () => { S.food[k].splice(i, 1); save(); queueSync(k); closeSheet(); renderFood(); renderFoodCard(); };
     $('#shClose').onclick = closeSheet;
   });
 }
@@ -1121,7 +1281,6 @@ function fixGap() {
   const gap = Math.round(screen.height - window.innerHeight);
   const g = 0;
   document.documentElement.style.setProperty('--gap', g + 'px');
-  const di = $('#dispInfo'); if (di) di.textContent = 'Display check: ' + window.innerHeight + ' of ' + screen.height + ' pt, top ' + Math.round(sat) + ', bottom ' + Math.round(sab) + ', adjusted ' + g + (standalone() ? ', app mode' : ', browser');
 }
 window.addEventListener('resize', fixGap);
 
@@ -1158,10 +1317,10 @@ $('#musUse').addEventListener('change', e => { S.music = e.target.checked; save(
 function tick() {
   const ms = streakMs(), d = Math.floor(ms / DAY), h = Math.floor(ms % DAY / HR), m = Math.floor(ms % HR / MIN);
   $('#hTime').textContent = d ? d + 'd ' + h + 'h' : h + 'h ' + pad(m) + 'm';
-  $('#hSub').textContent = rupees(ms / DAY * D.RATE) + ' kept · ' + wavesWon() + (wavesWon() === 1 ? ' wave won' : ' waves won') + (S.best ? ' · best ' + S.best + 'd' : '');
+  $('#hSub').textContent = rupees(fundKept()) + ' kept · ' + wavesWon() + (wavesWon() === 1 ? ' wave won' : ' waves won');
   const nx = D.MILES.find(x => ms < x.h*HR);
   $('#hNext').textContent = nx ? nx.tag : 'All unlocked'; $('#hNextIn').textContent = nx ? 'in ' + dur(nx.h*HR - ms) : '';
-  $('#tDays').textContent = d + (d === 1 ? ' day' : ' days'); $('#tWaves').textContent = wavesWon(); $('#tKept').textContent = rupees(ms / DAY * D.RATE);
+  $('#tDays').textContent = d ? d + (d === 1 ? ' day' : ' days') : h + 'h ' + pad(m) + 'm'; $('#tWaves').textContent = wavesWon(); const bst = Math.max(S.best || 0, d); $('#tKept').textContent = bst + (bst === 1 ? ' day' : ' days');
   $$('[data-cd]').forEach(el => el.textContent = dur(+el.dataset.cd * HR - ms));
   const cb = $('#cbLeft'); if (cb) { const p = lastSlip(); const left = DAY - (Date.now() - new Date(p.at)); if (left <= 0) renderComeback(); else cb.textContent = dur(left); }
   { const p = lastSlip(); if (needsFeel(p) && !$('#feel')) renderComeback(); }
@@ -1187,7 +1346,7 @@ function renderMotto() {
   const n = new Date(), base = Math.floor(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) / DAY) % D.HARD.length;
   if (hardI === null) hardI = base;
   const h = D.HARD[hardI % D.HARD.length];
-  $('#mT').textContent = h.t; $('#mS').textContent = h.d; $('#mSrc').textContent = h.s;
+  $('#mT').textContent = fill(h.t); $('#mS').textContent = fill(h.d); $('#mSrc').textContent = h.s;
 }
 $('#hard').onclick = () => { hardI = (hardI === null ? 0 : hardI) + 1; renderMotto(); };
 function renderAll() { renderMotto(); renderFoodCard(); if ($('#food').classList.contains('on')) renderFood(); renderStoryRow(); renderComeback(); renderFund(); renderEatbar(); renderBodyMap(); renderWeekCard(); tick(); if ($('#you').classList.contains('on')) renderYou(); if ($('#stories').classList.contains('on')) renderStoryList(); }
@@ -1200,7 +1359,7 @@ renderAll();
 loadVideo();
 loadMusic();
 setInterval(tick, 1000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderAll(); flushSync(); } else if ((S.syncPending || []).length) { clearTimeout(syncT); flushSync(); } });
-setTimeout(flushSync, 2500);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderAll(); maybeBackup(); flushSync(); } else if ((S.syncPending || []).length) { clearTimeout(syncT); flushSync(); } });
+setTimeout(() => { maybeBackup(); flushSync(); }, 2500);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 }

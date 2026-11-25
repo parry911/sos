@@ -329,5 +329,88 @@ window.SOS_DATA = (() => {
 
   const TRIGGERS = ['Late night','Bored','Stressed','After a test','With friends','Actually hungry','Other'];
 
+  /* ---- v15 content: true, sourced, testosterone first. New stories keep unlocking through early January. ---- */
+  DECKS.push(
+    {id:'lowt', label:'Low T', glyph:'T↓', color:'#1d2a4a', mood:'dark', art:'male', unlock:0, frames:[
+      {fx:'dots', n:40, big:'of obese men had low testosterone', body:'In 2,165 men aged 45 and over, 40% of the obese men had below-normal free testosterone. Among lean men it was 26%.', src:'Dhindsa et al., Diabetes Care, 2010'},
+      {big:'Young men too.', body:'About one in three obese young men, aged 14 to 35, have low free testosterone.', src:'Dhindsa et al., Diabetes Care, 2018'},
+      {big:'Belly fat turns it into estrogen.', body:'Fat tissue converts testosterone into estrogen, so the bigger the belly, the less testosterone is left.', src:'Endocrinology of obesity'},
+      {big:'The fix is free.', body:'Across studies, the more weight men lost, the more their testosterone rose. Every clean week is a step.', src:'Corona et al., European Journal of Endocrinology, 2013'}]},
+    {id:'ed', label:'Fixable', glyph:'31%', color:'#173a2b', mood:'drive', art:'pipe', unlock:0, frames:[
+      {big:'110 obese men with erection problems.', body:'Aged 35 to 55. Half changed how they ate and how much they moved, for two years. Half didn’t.', src:'Esposito et al., JAMA, 2004'},
+      {fx:'versus', a:['Changed nothing', 5, '%'], b:['Lost weight, moved more', 31, '%'], good:true, big:'got normal erections back', body:'About a third of the men who changed their lifestyle recovered full function. Almost none of the others did.', src:'Esposito et al., JAMA, 2004'},
+      {fx:'ecg', big:'It starts in the arteries.', body:'The same narrowing that ends in a heart attack shows up here first, years earlier. Every order you skip protects both.', src:'Montorsi et al., artery-size hypothesis'}]},
+    {id:'half', label:'Half gone', glyph:'½', color:'#3a1430', mood:'dark', art:'male', unlock:0, frames:[
+      {fx:'count', n:51.6, dec:1, pre:'−', suf:'%', big:'sperm concentration, 1973 to 2018', body:'Across 53 countries, Asia included. And the fall has sped up since 2000.', src:'Levine et al., Human Reproduction Update, 2022'},
+      {fx:'count', n:13, pre:'−', suf:' million', big:'sperm per ml, from about a glass of soda a day', body:'Young men drinking the most sugary drinks (about 220 ml a day) had 13 million fewer sperm per ml than men who drank none.', src:'Nassan et al., Human Reproduction, 2021'},
+      {big:'Slower too.', body:'In 189 healthy young men, those drinking the most sugary drinks had the least motile sperm.', src:'Chiu et al., Human Reproduction, 2014'}]},
+    {id:'bmi', label:'BMI 23.9', glyph:'23.9', color:'#3a2a10', mood:'tense', art:'hourglass', unlock:15, frames:[
+      {fx:'versus', a:['White European, obese at', 30, ''], b:['South Asian, same risk at', 23.9, ''], dec:1, big:'BMI: same diabetes risk', body:'In 1.47 million people in England, South Asians reached an obese white person’s diabetes risk at a BMI of just 23.9.', src:'Caleyachetty et al., Lancet Diabetes & Endocrinology, 2021'},
+      {big:'Yours is {bmi}.', body:'Already past that line. The good news: it moves with every clean week.', src:'Your weight and height'},
+      {big:'Same weight, more belly.', body:'South Asians carry more fat around the organs at the same weight. That deep fat is what drives diabetes and heart disease.', src:'American College of Cardiology review, 2021'}]},
+    {id:'midnight', label:'Midnight', glyph:'+4h', color:'#14213a', mood:'pulse', art:'moon', unlock:18, frames:[
+      {big:'Same food. Four hours later.', body:'Adults ate identical meals, early or about four hours later, with sleep, light and activity kept the same.', src:'Vujović et al., Cell Metabolism, 2022'},
+      {fx:'timeline', steps:[['Hunger','up'],['Leptin, the full signal','down'],['Calories burned','down'],['Fat cells','switch to storing']], big:'Eat late and', body:'Late eating raised hunger, lowered leptin, slowed calorie burning and shifted fat-tissue genes toward storing fat.', src:'Vujović et al., Cell Metabolism, 2022'},
+      {big:'A third of your orders: after 10 PM.', body:'The worst food at the worst hour. Dinner early, kitchen closed.', src:'Your order history'}]},
+    {id:'hooked', label:'Hooked', glyph:'14%', color:'#2a1040', mood:'dark', art:'flask', unlock:21, frames:[
+      {fx:'dots', n:14, big:'of adults meet addiction criteria for ultra-processed food', body:'Measured with the same yardstick as drug addiction: about the rate for alcohol (14%) and close to tobacco (18%).', src:'Gearhardt et al., BMJ, 2023'},
+      {big:'It isn’t weak will.', body:'Foods packed with both refined carbs and fat are built to be highly rewarding, and people eat them compulsively.', src:'Gearhardt et al., BMJ, 2023'},
+      {big:'Starve the cue.', body:'Each time the urge comes and you don’t feed it, the link between the trigger and the reward gets weaker.', src:'Extinction learning'}]},
+    {id:'fried', label:'Deep-fried', glyph:'+28%', color:'#4a2008', mood:'pulse', art:'drum', unlock:24, frames:[
+      {fx:'count', n:28, pre:'+', suf:'%', big:'heart attacks and strokes', body:'Across 17 studies and 562,445 people, the biggest fried-food eaters had 28% more major cardiovascular events than the lightest.', src:'Qin et al., Heart, 2021'},
+      {fx:'count', n:37, pre:'+', suf:'%', big:'heart failure', body:'And each extra 114 g serving a week added about 12% more.', src:'Qin et al., Heart, 2021'},
+      {big:'Oil reused all night.', body:'FSSAI bans frying oil once its polar compounds pass 25%, because reheated oil is linked to high blood pressure, clogged arteries and liver disease. You can’t see that number in a delivery bag.', src:'FSSAI, RUCO'}]},
+    {id:'brain', label:'Brain', glyph:'Mind', color:'#3a1424', mood:'tense', art:'brain', unlock:27, frames:[
+      {big:'Junk diet, smaller memory centre.', body:'Over four years of brain scans, people eating a more Western diet had a smaller left hippocampus, the part that stores what you learn.', src:'Jacka et al., BMC Medicine, 2015'},
+      {fx:'count', n:36, pre:'+', suf:'%', big:'risk of depression', body:'Over six years in 8,964 adults, the heaviest fast-food eaters had 36% higher risk than the lightest.', src:'Sánchez-Villegas et al., Public Health Nutrition, 2012'},
+      {big:'Mains needs this brain.', body:'Your revision lives in the hippocampus. Feed it eggs, dal, fish, fruit and sleep.', src:'Your plan'}]},
+    {id:'zinc', label:'Zinc', glyph:'Zn', color:'#10303a', mood:'drive', art:'male', unlock:30, frames:[
+      {fx:'meter', from:39.9, to:10.6, dec:1, unit:' nmol/L', big:'testosterone after 20 weeks low on zinc', body:'Four healthy young men on a zinc-poor diet: testosterone fell from 39.9 to 10.6 nmol/L.', src:'Prasad et al., Nutrition, 1996'},
+      {fx:'meter', from:8.3, to:16.0, dec:1, unit:' nmol/L', up:true, big:'after zinc came back', body:'In older men short of zinc, months of zinc nearly doubled testosterone, from 8.3 to 16.0 nmol/L.', src:'Prasad et al., Nutrition, 1996'},
+      {big:'Where you get it.', body:'Meat, eggs, chana, rajma, dal and nuts. Junk has almost none. Your Food tab now counts zinc: 17 mg a day.', src:'ICMR-NIN, 2020'}]},
+    {id:'jacked', label:'Jacked', glyph:'+1.2', color:'#173a2b', mood:'drive', art:'male', unlock:33, frames:[
+      {big:'40 young men. 4 weeks. 40% fewer calories.', body:'All lifted and trained six days a week. One group ate twice the protein.', src:'Longland et al., American Journal of Clinical Nutrition, 2016'},
+      {fx:'versus', a:['Lower protein', 0.1, ' kg'], b:['Higher protein', 1.2, ' kg'], dec:1, good:true, big:'muscle gained, while losing fat', body:'The high-protein group also lost more fat: 4.8 kg against 3.5 kg.', src:'Longland et al., American Journal of Clinical Nutrition, 2016'},
+      {big:'Your version.', body:'About 150 g of protein a day, heavy lifting, real food. A deficit and muscle are not enemies.', src:'Your targets'}]},
+    {id:'meat', label:'Group 1', glyph:'G1', color:'#4a0f14', mood:'dark', art:'burger', unlock:36, frames:[
+      {big:'Group 1. Same list as tobacco.', body:'WHO’s cancer agency classes processed meat as a definite cause of bowel cancer. Same category as smoking, though not the same size of risk.', src:'IARC, 2015'},
+      {fx:'count', n:18, pre:'+', suf:'%', big:'bowel cancer, per 50 g a day', body:'Each 50 g of processed meat eaten daily raises colorectal cancer risk by 18%.', src:'IARC, 2015'},
+      {fx:'count', n:29, pre:'+', suf:'%', big:'for men eating the most ultra-processed food', body:'Bowel cancer over 24 to 28 years. The link was strongest for ready-to-eat meat products and sugary drinks.', src:'Wang et al., BMJ, 2022'}]},
+    {id:'dad', label:'Dad had more', glyph:'1.2%', color:'#1a1a3a', mood:'tense', art:'male', unlock:39, frames:[
+      {fx:'count', n:1.2, dec:1, suf:'%', big:'less testosterone every year, at the same age', body:'A 60-year-old in 2004 had less than a 60-year-old in 1989, and ageing did not explain it.', src:'Travison et al., Journal of Clinical Endocrinology & Metabolism, 2007'},
+      {big:'You can’t pick your era.', body:'You can pick the belly fat, the sleep, the sugar and the fried oil: the things that drag yours down.', src:'Your plan'},
+      {fx:'quiz', q:'What lowers testosterone faster tonight?', options:['A 1 AM sugary order','An early dinner and sleep'], answer:0, body:'A sugar load cuts it about 25% within two hours, and short nights take off another 10 to 15% over a week.', src:'Caronia et al., 2013; Leproult & Van Cauter, 2011'}]}
+  );
+  REELS.push(
+    {id:'r23', art:'male', mood:'dark', fx:'dots', n:40, big:'of obese men: low testosterone', body:'Men 45 and over; 26% of lean men. One in three obese young men too.', src:'Dhindsa et al., Diabetes Care, 2010 and 2018'},
+    {id:'r24', art:'pipe', mood:'drive', fx:'versus', a:['Changed nothing', 5, '%'], b:['Lost weight, moved more', 31, '%'], good:1, big:'got normal erections back', body:'Obese men with erection problems, two years later.', src:'Esposito et al., JAMA, 2004'},
+    {id:'r25', art:'male', mood:'dark', fx:'count', n:51.6, dec:1, pre:'−', suf:'%', big:'sperm concentration since 1973', body:'53 countries, Asia included, and falling faster since 2000.', src:'Levine et al., Human Reproduction Update, 2022'},
+    {id:'r26', art:'glass', mood:'pulse', fx:'count', n:13, pre:'−', suf:' million', big:'sperm per ml from a glass of soda a day', body:'Young men drinking about 220 ml of sugary drinks a day, against men who drank none.', src:'Nassan et al., Human Reproduction, 2021'},
+    {id:'r27', art:'hourglass', mood:'tense', fx:'versus', a:['White European', 30, ''], b:['South Asian', 23.9, ''], dec:1, big:'BMI for the same diabetes risk', body:'Yours is {bmi}.', src:'Caleyachetty et al., Lancet Diabetes & Endocrinology, 2021'},
+    {id:'r28', art:'moon', mood:'pulse', fx:'timeline', steps:[['Hunger','up'],['Leptin','down'],['Calories burned','down'],['Fat cells','store more']], big:'Eat 4 hours later and', body:'Same meals, same sleep, only the clock changed.', src:'Vujović et al., Cell Metabolism, 2022'},
+    {id:'r29', art:'flask', mood:'dark', fx:'dots', n:14, big:'of adults: addicted to ultra-processed food', body:'Same scale as drug addiction. About the rate for alcohol.', src:'Gearhardt et al., BMJ, 2023'},
+    {id:'r30', art:'drum', mood:'pulse', fx:'count', n:28, pre:'+', suf:'%', big:'heart attacks and strokes', body:'For the biggest fried-food eaters, across 562,445 people.', src:'Qin et al., Heart, 2021'},
+    {id:'r31', art:'drum', mood:'tense', big:'Oil reused all night.', body:'FSSAI bans frying oil past 25% polar compounds: it’s linked to high blood pressure, clogged arteries and liver disease.', src:'FSSAI, RUCO'},
+    {id:'r32', art:'male', mood:'tense', fx:'meter', from:39.9, to:10.6, dec:1, unit:' nmol/L', big:'testosterone after 20 weeks low on zinc', body:'Healthy young men. Eat your eggs, meat, chana and nuts.', src:'Prasad et al., Nutrition, 1996'},
+    {id:'r33', art:'male', good:1, mood:'drive', fx:'versus', a:['Lower protein', 0.1, ' kg'], b:['Higher protein', 1.2, ' kg'], dec:1, big:'muscle gained in a 40% deficit', body:'Four weeks, lifting hard. The high-protein group also lost 4.8 kg of fat.', src:'Longland et al., American Journal of Clinical Nutrition, 2016'},
+    {id:'r34', art:'burger', mood:'dark', fx:'count', n:18, pre:'+', suf:'%', big:'bowel cancer per 50 g of processed meat a day', body:'Group 1 carcinogen, the same list as tobacco.', src:'IARC, 2015'},
+    {id:'r35', art:'brain', mood:'tense', fx:'count', n:36, pre:'+', suf:'%', big:'risk of depression', body:'For the heaviest fast-food eaters, over six years.', src:'Sánchez-Villegas et al., Public Health Nutrition, 2012'},
+    {id:'r36', art:'male', mood:'tense', fx:'count', n:1.2, dec:1, suf:'%', big:'less testosterone every year, same age', body:'Men today have less than men of the same age a generation ago.', src:'Travison et al., Journal of Clinical Endocrinology & Metabolism, 2007'}
+  );
+  HARD.push(
+    {t:'40% of obese men have low testosterone.', d:'Men 45 and over, against 26% of lean men. And one in three obese young men.', s:'Dhindsa et al., Diabetes Care, 2010 and 2018'},
+    {t:'Sperm counts have halved since 1973.', d:'51.6% lower across 53 countries, Asia included, and falling faster since 2000.', s:'Levine et al., Human Reproduction Update, 2022'},
+    {t:'A glass of soda a day: 13 million fewer sperm per ml.', d:'Young men drinking about 220 ml of sugary drinks a day, against men who drank none.', s:'Nassan et al., Human Reproduction, 2021'},
+    {t:'At BMI 23.9, a South Asian has an obese European’s diabetes risk.', d:'Yours is {bmi}. It moves with every clean week.', s:'Caleyachetty et al., Lancet Diabetes & Endocrinology, 2021'},
+    {t:'Eating 4 hours later made people hungrier and burn less.', d:'Leptin fell and fat tissue switched toward storing.', s:'Vujović et al., Cell Metabolism, 2022'},
+    {t:'1 in 7 adults is hooked on ultra-processed food.', d:'Measured with the same scale as drug addiction: about the rate for alcohol.', s:'Gearhardt et al., BMJ, 2023'},
+    {t:'Most fried food: 28% more heart attacks and strokes.', d:'And 37% more heart failure, across 562,445 people.', s:'Qin et al., Heart, 2021'},
+    {t:'Low zinc: testosterone fell by three-quarters.', d:'Young men on a zinc-poor diet went from 39.9 to 10.6 nmol/L in 20 weeks.', s:'Prasad et al., Nutrition, 1996'},
+    {t:'Processed meat is a Group 1 carcinogen.', d:'Each 50 g a day: 18% more bowel cancer.', s:'IARC, 2015'},
+    {t:'Most ultra-processed food: 29% more bowel cancer in men.', d:'Ready-to-eat meat products and sugary drinks showed the strongest link.', s:'Wang et al., BMJ, 2022'},
+    {t:'Junk diets go with a smaller hippocampus.', d:'The brain’s memory centre, where your revision lives.', s:'Jacka et al., BMC Medicine, 2015'},
+    {t:'Obese men who changed their lifestyle: a third got erections back.', d:'31% recovered full function in two years, against 5% who changed nothing.', s:'Esposito et al., JAMA, 2004'},
+    {t:'High protein in a deficit: +1.2 kg muscle, −4.8 kg fat.', d:'Young men in four weeks, lifting hard on 40% fewer calories.', s:'Longland et al., American Journal of Clinical Nutrition, 2016'}
+  );
   return {RATE, FALLBACK_START, TRACK0, HISTORY, MILES, ORGANS, DECKS, REELS, FLIPS, KITCHEN, TRIGGERS, HARD, NEVER, EAT, TICK_NEVER, TICK_EAT, EVERYDAY, SHOPS, PAST, GOOD, BAD, KWHY, EATWHY, EVERYWHY, T_UP, T_DOWN};
 })();

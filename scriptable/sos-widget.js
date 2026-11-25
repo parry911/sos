@@ -9,36 +9,26 @@ if (fm.fileExists(path)) {
 }
 
 const DAY = 864e5, HR = 36e5;
-const MILES = [[0, "Hour 0"], [24, "Day 1"], [72, "Day 3"], [168, "Day 7"], [336, "Day 14"], [720, "Day 30"], [1440, "Day 60"], [2160, "Day 90"], [4320, "Day 180"], [8760, "Day 365"]];
-// Same order as the SOS app's "Today's hard truth".
-const HARD = [
-  ["26 orders in 24 days. ₹10,000 gone.", "Your order history"],
-  ["Payment failed. You ordered again in 2 minutes.", "Your order history"],
-  ["₹1.5 lakh a year at November's pace.", "Your order history"],
-  ["One fast-food meal stiffens your arteries for 4 hours.", "Vogel et al., 1997"],
-  ["Sugar hit: testosterone down 25% in 2 hours.", "Caronia et al., 2013"],
-  ["4 days of junk breakfasts. Memory got worse.", "Attuquayefio et al., 2017"],
-  ["1 in 3 Indian adults has fatty liver.", "Shalimar et al., 2022"],
-  ["South Asians get heart disease up to 10 years earlier.", "American Heart Association, 2018"],
-  ["Junk-heavy diets: about 50% more heart deaths.", "Lane et al., BMJ, 2024"],
-  ["Erection problems often come years before a heart attack.", "Montorsi et al."],
-  ["On junk, people ate 500 kcal more a day without noticing.", "Hall et al., 2019"],
-  ["10 days of McDonald's: about 1,300 gut species gone.", "Spector, 2015"],
-  ["You eat about 8 g of salt a day. The limit is 5.", "ICMR-NCDIS, 2023"],
-  ["Belly fat turns your testosterone into estrogen.", "Endocrinology of obesity"],
-  ["Most ultra-processed food: 21% higher risk of early death.", "Lane et al., BMJ, 2024"],
-  ["5-hour nights for a week: testosterone down 10–15%.", "Leproult & Van Cauter, 2011"],
-  ["Trans fats: lower testosterone, smaller testes.", "Mínguez-Alarcón et al., 2017"],
-  ["Lose the belly fat, get your testosterone back.", "Corona et al., 2013"],
-  ["Low-fat eating cut testosterone 10–15%.", "Whittaker & Wu, 2021"]
-];
+// Fallback content. The live list comes from the SOS app (widget.json), so new hard truths arrive without re-copying this script.
+const MILES0 = [[0, "Hour 0"], [24, "Day 1"], [72, "Day 3"], [168, "Day 7"], [336, "Day 14"], [720, "Day 30"], [1440, "Day 60"], [2160, "Day 90"], [4320, "Day 180"], [8760, "Day 365"]];
+const HARD0 = [["Sugar hit: testosterone down 25% in 2 hours.", "Caronia et al., 2013"], ["One fast-food meal stiffens your arteries for 4 hours.", "Vogel et al., 1997"]];
+const cpath = fm.joinPath(dir, "sos-content.json");
+let content = null;
+const stale = !fm.fileExists(cpath) || (Date.now() - fm.modificationDate(cpath).getTime()) > 6 * HR;
+if (stale) {
+  try { const r = new Request("https://parry911.github.io/sos/widget.json?d=" + new Date().toISOString().slice(0, 13)); r.timeoutInterval = 6; const j = await r.loadJSON(); if (j && j.hard && j.hard.length) { content = j; fm.writeString(cpath, JSON.stringify(j)); } } catch (e) {}
+}
+if (!content && fm.fileExists(cpath)) { try { await fm.downloadFileFromiCloud(cpath); content = JSON.parse(fm.readString(cpath)); } catch (e) {} }
+const MILES = content && content.miles ? content.miles : MILES0;
+const HARD = content && content.hard ? content.hard : HARD0;
 const now = new Date();
 const hard = HARD[Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / DAY) % HARD.length];
 
 const ms = Math.max(0, Date.now() - new Date(data.start).getTime());
 const days = Math.floor(ms / DAY);
 const hrs = Math.floor((ms % DAY) / HR), mins = Math.floor((ms % HR) / 6e4);
-const kept = "₹" + Math.floor(ms / DAY * (data.rate || 420)).toLocaleString("en-IN");
+const keptN = data.origin ? (Date.now() - new Date(data.origin).getTime()) / DAY * (data.rate || 420) - (data.debit || 0) : ms / DAY * (data.rate || 420);
+const kept = "₹" + Math.max(0, Math.floor(keptN)).toLocaleString("en-IN");
 const nextI = MILES.findIndex(m => ms < m[0] * HR);
 const next = nextI >= 0 ? MILES[nextI] : null;
 const prevH = nextI > 0 ? MILES[nextI - 1][0] : 0;

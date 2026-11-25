@@ -7,7 +7,7 @@
 pre{overflow:auto;max-height:220px;font-size:12px;background:#000;padding:10px;border-radius:10px;white-space:pre}
 button{min-height:48px;padding:0 18px;border:0;border-radius:12px;background:#7ef0b5;color:#062015;font-weight:700;font-size:16px}</style></head>
 <body><div class="w"><h1>Scriptable scripts for SOS</h1>
-<p>Tap Copy, open Scriptable, tap +, paste, then rename the script to the exact name shown.</p>
+<p>Tap Copy, open Scriptable, open the script with the same name (or tap + for a new one), select all, paste over it, and keep the exact name shown. From this version on, new hard truths reach the widget by themselves.</p>
 <div class="box"><b>1. SOS Widget</b><p>Name it exactly: SOS Widget</p><button data-c="a">Copy SOS Widget</button><pre id="a">// SOS Widget for Scriptable. Name this script exactly: SOS Widget
 // Home Screen (small or medium) and Lock Screen widget: your streak plus one hard truth a day.
 const fm = FileManager.iCloud();
@@ -19,36 +19,26 @@ if (fm.fileExists(path)) {
 }
 
 const DAY = 864e5, HR = 36e5;
-const MILES = [[0, &quot;Hour 0&quot;], [24, &quot;Day 1&quot;], [72, &quot;Day 3&quot;], [168, &quot;Day 7&quot;], [336, &quot;Day 14&quot;], [720, &quot;Day 30&quot;], [1440, &quot;Day 60&quot;], [2160, &quot;Day 90&quot;], [4320, &quot;Day 180&quot;], [8760, &quot;Day 365&quot;]];
-// Same order as the SOS app&#x27;s &quot;Today&#x27;s hard truth&quot;.
-const HARD = [
-  [&quot;26 orders in 24 days. ₹10,000 gone.&quot;, &quot;Your order history&quot;],
-  [&quot;Payment failed. You ordered again in 2 minutes.&quot;, &quot;Your order history&quot;],
-  [&quot;₹1.5 lakh a year at November&#x27;s pace.&quot;, &quot;Your order history&quot;],
-  [&quot;One fast-food meal stiffens your arteries for 4 hours.&quot;, &quot;Vogel et al., 1997&quot;],
-  [&quot;Sugar hit: testosterone down 25% in 2 hours.&quot;, &quot;Caronia et al., 2013&quot;],
-  [&quot;4 days of junk breakfasts. Memory got worse.&quot;, &quot;Attuquayefio et al., 2017&quot;],
-  [&quot;1 in 3 Indian adults has fatty liver.&quot;, &quot;Shalimar et al., 2022&quot;],
-  [&quot;South Asians get heart disease up to 10 years earlier.&quot;, &quot;American Heart Association, 2018&quot;],
-  [&quot;Junk-heavy diets: about 50% more heart deaths.&quot;, &quot;Lane et al., BMJ, 2024&quot;],
-  [&quot;Erection problems often come years before a heart attack.&quot;, &quot;Montorsi et al.&quot;],
-  [&quot;On junk, people ate 500 kcal more a day without noticing.&quot;, &quot;Hall et al., 2019&quot;],
-  [&quot;10 days of McDonald&#x27;s: about 1,300 gut species gone.&quot;, &quot;Spector, 2015&quot;],
-  [&quot;You eat about 8 g of salt a day. The limit is 5.&quot;, &quot;ICMR-NCDIS, 2023&quot;],
-  [&quot;Belly fat turns your testosterone into estrogen.&quot;, &quot;Endocrinology of obesity&quot;],
-  [&quot;Most ultra-processed food: 21% higher risk of early death.&quot;, &quot;Lane et al., BMJ, 2024&quot;],
-  [&quot;5-hour nights for a week: testosterone down 10–15%.&quot;, &quot;Leproult &amp; Van Cauter, 2011&quot;],
-  [&quot;Trans fats: lower testosterone, smaller testes.&quot;, &quot;Mínguez-Alarcón et al., 2017&quot;],
-  [&quot;Lose the belly fat, get your testosterone back.&quot;, &quot;Corona et al., 2013&quot;],
-  [&quot;Low-fat eating cut testosterone 10–15%.&quot;, &quot;Whittaker &amp; Wu, 2021&quot;]
-];
+// Fallback content. The live list comes from the SOS app (widget.json), so new hard truths arrive without re-copying this script.
+const MILES0 = [[0, &quot;Hour 0&quot;], [24, &quot;Day 1&quot;], [72, &quot;Day 3&quot;], [168, &quot;Day 7&quot;], [336, &quot;Day 14&quot;], [720, &quot;Day 30&quot;], [1440, &quot;Day 60&quot;], [2160, &quot;Day 90&quot;], [4320, &quot;Day 180&quot;], [8760, &quot;Day 365&quot;]];
+const HARD0 = [[&quot;Sugar hit: testosterone down 25% in 2 hours.&quot;, &quot;Caronia et al., 2013&quot;], [&quot;One fast-food meal stiffens your arteries for 4 hours.&quot;, &quot;Vogel et al., 1997&quot;]];
+const cpath = fm.joinPath(dir, &quot;sos-content.json&quot;);
+let content = null;
+const stale = !fm.fileExists(cpath) || (Date.now() - fm.modificationDate(cpath).getTime()) &gt; 6 * HR;
+if (stale) {
+  try { const r = new Request(&quot;https://parry911.github.io/sos/widget.json?d=&quot; + new Date().toISOString().slice(0, 13)); r.timeoutInterval = 6; const j = await r.loadJSON(); if (j &amp;&amp; j.hard &amp;&amp; j.hard.length) { content = j; fm.writeString(cpath, JSON.stringify(j)); } } catch (e) {}
+}
+if (!content &amp;&amp; fm.fileExists(cpath)) { try { await fm.downloadFileFromiCloud(cpath); content = JSON.parse(fm.readString(cpath)); } catch (e) {} }
+const MILES = content &amp;&amp; content.miles ? content.miles : MILES0;
+const HARD = content &amp;&amp; content.hard ? content.hard : HARD0;
 const now = new Date();
 const hard = HARD[Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / DAY) % HARD.length];
 
 const ms = Math.max(0, Date.now() - new Date(data.start).getTime());
 const days = Math.floor(ms / DAY);
 const hrs = Math.floor((ms % DAY) / HR), mins = Math.floor((ms % HR) / 6e4);
-const kept = &quot;₹&quot; + Math.floor(ms / DAY * (data.rate || 420)).toLocaleString(&quot;en-IN&quot;);
+const keptN = data.origin ? (Date.now() - new Date(data.origin).getTime()) / DAY * (data.rate || 420) - (data.debit || 0) : ms / DAY * (data.rate || 420);
+const kept = &quot;₹&quot; + Math.max(0, Math.floor(keptN)).toLocaleString(&quot;en-IN&quot;);
 const nextI = MILES.findIndex(m =&gt; ms &lt; m[0] * HR);
 const next = nextI &gt;= 0 ? MILES[nextI] : null;
 const prevH = nextI &gt; 0 ? MILES[nextI - 1][0] : 0;
@@ -142,12 +132,14 @@ if (fm.fileExists(path)) {
 if (q.start) data.start = q.start;
 if (q.best) data.best = Number(q.best);
 if (q.rate) data.rate = Number(q.rate);
+if (q.origin) data.origin = q.origin;
+if (q.debit !== undefined) data.debit = Number(q.debit) || 0;
 data.synced = new Date().toISOString();
 fm.writeString(path, JSON.stringify(data));
 const n = new Notification();
 n.title = &quot;SOS widget updated&quot;;
-n.body = &quot;Streak counted from &quot; + new Date(data.start).toLocaleString(&quot;en-IN&quot;) + &quot;. Head back to SOS.&quot;;
+n.body = &quot;Streak counted from &quot; + new Date(data.start).toLocaleString(&quot;en-IN&quot;) + &quot;, freedom fund updated. Head back to SOS.&quot;;
 await n.schedule();
 Script.complete();
 </pre></div>
-</div><script>document.querySelectorAll('[data-c]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(document.getElementById(b.dataset.c).textContent);b.textContent='Copied';}catch(e){b.textContent='Select the text and copy it';}});</script></body></html>
+</div><script>document.querySelectorAll('[data-c]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(document.getElementById(b.dataset.c).textContent);b.textContent='Copied';setTimeout(()=>b.textContent=b.dataset.c==='a'?'Copy SOS Widget':'Copy SOS Sync',1800)}catch(e){b.textContent='Copy failed: select the text and copy'}});</script></body></html>
