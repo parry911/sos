@@ -467,7 +467,7 @@ $('#openKitchen').onclick = kitchenSheet;
 /* ---------- SOS flow ---------- */
 const sv = $('#svid');
 let sos = {}, waveT = 0;
-function step(n) { $$('#sos .step').forEach(s => s.classList.toggle('on', s.id === 's-' + n)); if (n !== 'video') sv.pause(); }
+function step(n) { $$('#sos .step').forEach(s => s.classList.toggle('on', s.id === 's-' + n)); if (n !== 'video') sv.pause(); $('#coachTop').classList.toggle('hide', ['how', 'advice', 'end', 'reward'].includes(n)); refreshCoach(); }
 function openSOS() {
   sos = {want:null, hungry:null, ratings:[], t0:0, last:0};
   $('#sos').classList.remove('hide'); $('#sProg').style.width = '0';
@@ -492,29 +492,34 @@ sv.addEventListener('ended', () => { S.seen.you = dkey(new Date()); save(); step
 $('#vSkip').onclick = () => { S.seen.you = dkey(new Date()); save(); step('want'); $('#sProg').style.width = '0'; };
 $('#craves').addEventListener('click', e => {
   const b = e.target.closest('[data-w]'); if (!b) return;
-  sos.want = b.dataset.w;
+  sos.want = b.dataset.w; refreshCoach();
   $$('#craves .crave').forEach(c => c.classList.toggle('sel', c === b));
   $('#dish1').innerHTML = dishHTML(D.KITCHEN.find(k => k.id === sos.want), false);
   $('#ask').classList.remove('hide');
   $('#ask').scrollIntoView({behavior:'smooth', block:'nearest'});
 });
 $('#hYes').onclick = () => { sos.hungry = true; $('#dish2').innerHTML = dishHTML(D.KITCHEN.find(k => k.id === sos.want), true); step('hungry'); };
-$('#hNo').onclick = () => { sos.hungry = false; coachLink('#coachGo', false); step('how'); };
+$('#hNo').onclick = () => { sos.hungry = false; step('how'); };
 $('#waveGo').onclick = startWave;
-/* Craving coach: lives on the Mains Run page in Claude. The link carries what he wants, his streak, best, fund and waves won
-   as one plain #name (the only kind of hash an artifact page receives). This app keeps the score: when he comes back, it asks how it went. */
+/* Craving coach: lives on the Mains Run page in Claude. Every coach link carries what he wants, whether he passed the
+   egg test (nh = not hungry), whether he already rode the wave (after), his streak hours, best, fund and waves won, as one
+   plain #name (the only kind of hash an artifact page receives). This app keeps the score: when he comes back, it asks how it went. */
 const COACH = 'https://claude.ai/artifact/SoUNgwpovKoWycJGTuXkBB';
-function coachLink(sel, after) {
+function coachURL() {
   const h = Math.floor(streakMs() / HR), b = Math.max(S.best || 0, Math.floor(streakMs() / DAY));
-  const tag = ['craving', sos.want || '', after ? 'after' : '', 'h' + h, 'b' + b, 'r' + Math.round(fundKept()), 'w' + wavesWon()].filter(Boolean).join('-');
-  $(sel).href = COACH + '#' + tag;
+  return COACH + '#' + ['craving', sos.want || '', sos.hungry === false ? 'nh' : '', sos.after ? 'after' : '', 'h' + h, 'b' + b, 'r' + Math.round(fundKept()), 'w' + wavesWon()].filter(Boolean).join('-');
 }
+function refreshCoach() { const u = coachURL(); $$('.coachlink').forEach(a => { a.href = u; }); }
 function toCoach() {
-  sos.coach = true; clearInterval(waveT);
+  setTimeout(closeSheet, 0);
+  if ($('#sos').classList.contains('hide')) {
+    sos = {want:null, hungry:null, ratings:[], t0:0, last:0};
+    $('#recall').innerHTML = recallHTML(); $('#sos').classList.remove('hide'); $('#sProg').style.width = '0';
+  }
+  sos.coach = true; clearInterval(waveT); sv.pause();
   setTimeout(() => { $('#endQ').textContent = 'Back from your coach. Did it pass?'; step('end'); }, 600);
 }
-$('#coachGo').addEventListener('click', toCoach);
-$('#coachGo2').addEventListener('click', toCoach);
+document.addEventListener('click', e => { if (e.target.closest('.coachlink')) toCoach(); });
 $('#ateReal').onclick = () => finish('real');
 $('#rate').innerHTML = Array.from({length:10}, (_, i) => `<button data-v="${i+1}">${i+1}</button>`).join('');
 $('#rate').addEventListener('click', e => {
@@ -557,7 +562,7 @@ $('#gone').onclick = () => { clearInterval(waveT); $('#endQ').textContent = 'Gon
 $('#nextReel').onclick = () => $('#miniFeed').scrollBy({top: $('#miniFeed').clientHeight, behavior:'smooth'});
 $('#miniFeed').addEventListener('click', e => { const pb = e.target.closest('[data-pin]'); if (pb) togglePin(pb.dataset.pin, e.target.closest('.reel')); });
 $('#won').onclick = () => finish('won');
-$('#still').onclick = () => { clearInterval(waveT); const k = D.KITCHEN.find(x => x.id === sos.want); $('#dish3').innerHTML = k ? dishHTML(k, true) : ''; coachLink('#coachGo2', true); step('advice'); };
+$('#still').onclick = () => { clearInterval(waveT); const k = D.KITCHEN.find(x => x.id === sos.want); $('#dish3').innerHTML = k ? dishHTML(k, true) : ''; sos.after = true; step('advice'); };
 $('#realFirst').onclick = () => finish('real');
 $('#ordered').onclick = () => { logUrge('ate'); closeSOS(); slipSheet(); };
 $('#sClose').onclick = closeSOS;
@@ -799,8 +804,10 @@ function eatHTML(focus) {
 function recipeHTML(id) { const k = D.KITCHEN.find(x => x.id === id), w = D.KWHY[id] || ['', '']; return dishHTML(k, true) + `<div class="el-wb"><span class="g">${esc(w[0])}</span><span class="c">${esc(w[1])}</span></div>`; }
 function cravingSheet() {
   if (S.decoy) { foOpen(); return; }
+  if ($('#sos').classList.contains('hide')) sos = {want:null, hungry:null, ratings:[], t0:0, last:0};
   sheet(`<div class="q" style="font-size:30px">Craving something?</div><p>Pick one. Each of these gets you through it, and every craving you ride out protects your testosterone.</p>
-    <button class="ch-o hot" id="chOrder"><span class="el-ic" style="background:#3a1a12">${ART.burger().replace('<svg', '<svg width="30" height="30"')}</span><span><b>Order it</b><small>Browse your restaurants, order, pay. Nothing arrives, and the craving passes while you wait.</small></span></button>
+    <a class="ch-o hot coach coachlink" id="chCoach" href="${coachURL()}" target="_blank" rel="noopener"><span class="el-ic" style="background:#3a1a12"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ff8a75" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 10.5h7M8.5 13.5h4.5"/></svg></span><span><b>Talk to your craving coach</b><small>A live chat in Claude that talks you through it, shows you what the food really does, and sends you back to work.</small></span></a>
+    <button class="ch-o" id="chOrder"><span class="el-ic" style="background:#3a1a12">${ART.burger().replace('<svg', '<svg width="30" height="30"')}</span><span><b>Order it</b><small>Browse your restaurants, order, pay. Nothing arrives, and the craving passes while you wait.</small></span></button>
     <button class="ch-o" id="chEat"><span class="el-ic" style="background:#173a2b">${ART.bowl().replace('<svg', '<svg width="30" height="30"')}</span><span><b>Eat from your list</b><small>Food that builds you, and what each one gives your body.</small></span></button>
     <button class="ch-o" id="chMake"><span class="el-ic" style="background:#4a2a1a">${ART.cup().replace('<svg', '<svg width="30" height="30"')}</span><span><b>Make one right now</b><small>The home version of exactly what you want, in 3 to 30 minutes.</small></span></button>
     <button class="btn dim full" id="chSOS">Watch my video and ride the wave</button>`, () => {

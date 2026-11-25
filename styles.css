@@ -753,3 +753,6 @@ details.settings[open]>summary::after{content:"Close"}
 /* craving coach link */
 .coachbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;text-decoration:none;min-height:66px;padding:10px 16px;line-height:1.25}
 .coachbtn small{display:block;font-weight:500;font-size:13px;opacity:.78;margin-top:3px}
+.coachpill{flex:none;display:inline-flex;align-items:center;min-height:40px;padding:0 15px;border-radius:999px;background:var(--coral);color:#1a0705;font-weight:700;font-size:14px;text-decoration:none}
+.coachpill.hide{display:none}
+.ch-o.coach{text-decoration:none;color:inherit}
