@@ -705,14 +705,18 @@ function eatHTML(focus) {
   return `<div class="el">
     <div class="el-vs"><div class="el-good"><h6>What this list gives you</h6><ul>${D.GOOD.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
     <div class="el-bad"><h6>What the other list does</h6><ul>${D.BAD.map(([t, src]) => `<li>${esc(t)}<small>${esc(src)}</small></li>`).join('')}</ul></div></div>
+    <div class="el-t"><h6>Eat for testosterone and muscle</h6><p>Food can’t push testosterone above normal. Junk, belly fat and short sleep can drag it down, and that’s the part you control.</p>
+      <ul class="tup">${D.T_UP.map(([a, b]) => `<li><b>${esc(a)}</b><span>${esc(b)}</span></li>`).join('')}</ul>
+      <div class="tdn"><b>What drags it down</b><ul>${D.T_DOWN.map(([a, b, c]) => `<li><b>${esc(a)}</b><span>${esc(b)} · ${esc(c)}</span></li>`).join('')}</ul></div>
+      <div class="thab"><b>To get jacked:</b> about ${Math.round(1.6 * curWeight() / 5) * 5} g protein a day (1.6 g per kg) · lift heavy 3–4 days a week · sleep 7–9 hours · get your vitamin D tested, low levels are common in India</div></div>
     <h5>Make one right now</h5>${ks.map(k => { const w = D.KWHY[k.id] || ['', '']; return `<button class="el-m${focus.includes(k.id) ? ' top' : ''}" data-rk="${k.id}"><span class="el-ic" style="background:${k.color}">${ART[k.art]().replace('<svg', '<svg width="30" height="30"')}</span><span class="t"><b>${esc(k.name)}</b><small>For ${esc(k.craving.toLowerCase())} · ${k.mins} min · tap for the recipe</small><span class="g">${esc(w[0])}</span><span class="c">${esc(w[1])}</span></span></button>`; }).join('')}
     <h5>From your orders, these were fine</h5>${D.EAT.map(x => `<div class="el-r"><b>${esc(x.t)}</b><span>${esc(x.d)}</span><span class="g">${esc(D.EATWHY[x.t] || '')}</span></div>`).join('')}
-    <h5>Your everyday foods</h5>${D.EVERYDAY.map(([t, d]) => `<div class="el-r"><b>${esc(t)}</b><span>${esc(d)}</span><span class="g">${esc(D.EVERYWHY[t] || '')}</span></div>`).join('')}</div>`;
+    <h5>Your everyday foods</h5>${D.EVERYDAY.map(([t, d]) => `<div class="el-r"><b>${esc(t)}${/Protein|Dal|Sabzi|Nuts/.test(t) ? '<i class="tplus">T+</i>' : ''}</b><span>${esc(d)}</span><span class="g">${esc(D.EVERYWHY[t] || '')}</span></div>`).join('')}</div>`;
 }
 function recipeHTML(id) { const k = D.KITCHEN.find(x => x.id === id), w = D.KWHY[id] || ['', '']; return dishHTML(k, true) + `<div class="el-wb"><span class="g">${esc(w[0])}</span><span class="c">${esc(w[1])}</span></div>`; }
 function cravingSheet() {
   if (S.decoy) { foOpen(); return; }
-  sheet(`<div class="q" style="font-size:30px">Craving something?</div><p>Pick one. Each of these gets you through it.</p>
+  sheet(`<div class="q" style="font-size:30px">Craving something?</div><p>Pick one. Each of these gets you through it, and every craving you ride out protects your testosterone.</p>
     <button class="ch-o hot" id="chOrder"><span class="el-ic" style="background:#3a1a12">${ART.burger().replace('<svg', '<svg width="30" height="30"')}</span><span><b>Order it</b><small>Browse your restaurants, order, pay. Nothing arrives, and the craving passes while you wait.</small></span></button>
     <button class="ch-o" id="chEat"><span class="el-ic" style="background:#173a2b">${ART.bowl().replace('<svg', '<svg width="30" height="30"')}</span><span><b>Eat from your list</b><small>Food that builds you, and what each one gives your body.</small></span></button>
     <button class="ch-o" id="chMake"><span class="el-ic" style="background:#4a2a1a">${ART.cup().replace('<svg', '<svg width="30" height="30"')}</span><span><b>Make one right now</b><small>The home version of exactly what you want, in 3 to 30 minutes.</small></span></button>
@@ -730,7 +734,7 @@ function makeSheet() {
   });
 }
 function neverSheet() {
-  sheet(`<div class="q" style="font-size:28px">Don’t order these again</div><p>Straight from your Swiggy, Zomato, Blinkit and Instamart orders, Sep–Nov 2026.</p><div class="nl">${D.NEVER.map(x => `<div class="nv"><b>${esc(x.t)}${x.n ? `<i>${esc(x.n)}</i>` : ''}</b><span>${esc(x.d)}</span></div>`).join('')}</div><button class="btn mint full" id="toEat">What can I eat instead?</button><button class="btn dim full" id="shClose">Close</button>`, () => { $('#shClose').onclick = closeSheet; $('#toEat').onclick = () => eatSheet(); });
+  sheet(`<div class="q" style="font-size:28px">Don’t order these again</div><p>Straight from your Swiggy, Zomato, Blinkit and Instamart orders, Sep–Nov 2026. Almost all of it drags your testosterone down.</p><div class="nl">${D.NEVER.map(x => `<div class="nv"><b>${esc(x.t)}${x.n ? `<i>${esc(x.n)}</i>` : ''}</b><span>${esc(x.d)}</span>${x.tm ? `<em class="tminus">${esc(x.tm)}</em>` : ''}</div>`).join('')}</div><button class="btn mint full" id="toEat">What can I eat instead?</button><button class="btn dim full" id="shClose">Close</button>`, () => { $('#shClose').onclick = closeSheet; $('#toEat').onclick = () => eatSheet(); });
 }
 function eatSheet(recipe, focus) {
   sheet(`<div class="q" style="font-size:28px">Eat these instead</div><p>Everything on this page builds you. Everything on the other list costs you.</p><div id="kOut"></div>${eatHTML(focus)}<button class="btn dim full" id="shClose">Close</button>`, l => {
@@ -754,6 +758,8 @@ const SHOP = Object.fromEntries(D.SHOPS.map(s => [s.id, s]));
 const DECOY_MS = (new URLSearchParams(location.search).get('decoyFast') ? 0.4 : 15) * MIN;
 const FO_CATS = [['Tacos', /taco|nacho|chalupa/i, 'chips'], ['Burgers', /burger|whopper|mcchicken|mcaloo|sandwich/i, 'burger'], ['Fried chicken', /nugget|popcorn|wings|strips|zinger|chicken burger/i, 'drum'], ['Shakes', /shake/i, 'glass'], ['Ice cream', /ice cream|scoop/i, 'cup'], ['Chips', /chips|lay's|doritos|puffs|namkeen|cornitos/i, 'chips'], ['Chinese', /noodles|chilli|chopsuey|honey|spring roll/i, 'bowl'], ['Coffee', /latte|coffee/i, 'glass'], ['Cakes', /cake|brownie|cookie|minibon|churros|milano/i, 'cup']];
 const NV = /chicken|nugget|fish|zinger|whopper|mcchicken|salami|seekh|wings|popcorn|chalupa|chipotle/i;
+const SUGR = /shake|ice cream|cake|brownie|cookie|minibon|churros|milano|nimbooz|limca|pepsi|latte|go zero/i, FRYR = /nugget|popcorn|wings|strips|zinger|chalupa|crispy|fried|fish n chips|twists|chips|nachos|doritos|namkeen|vada|tikki|spring roll|honey chilli potato|chilly paneer|chilli chicken|mcaloo|mcchicken|mayo burst|bold chicken|hot garlic|puffs/i;
+const tTag = n => SUGR.test(n) ? '<span class="tg">Sugar load · testosterone ↓</span>' : FRYR.test(n) ? '<span class="tg">Deep-fried · trans fats · testosterone ↓</span>' : '';
 const PAST_NAMES = new Set(D.PAST.flatMap(o => o.items));
 let fo = {cart: null, cat: null, q: '', timer: 0, factI: 0};
 const itemArt = (n, k) => /shake|latte|soda|nimbooz|limca|pepsi/i.test(n) ? 'glass' : /ice cream|cake|brownie|cookie|minibon|churros|milano|go zero/i.test(n) ? 'cup' : /nugget|popcorn|wings|strips|zinger|fish/i.test(n) ? 'drum' : /burger|whopper|mcchicken|mcaloo|sandwich|vada pav|pizza|wrap/i.test(n) ? 'burger' : /sauce|dip$|ketchup/i.test(n) ? 'jar' : /noodles|chilli|chopsuey|roll|potato/i.test(n) ? 'bowl' : /nacho|chips|lay's|doritos|puffs|namkeen|taco|chalupa|twists/i.test(n) ? 'chips' : k;
@@ -827,7 +833,7 @@ function foShop(id) {
   const s = SHOP[id];
   const rows = s.items.map(([n, p]) => {
     const q = fo.cart && fo.cart.shop === id ? (fo.cart.lines[n] || 0) : 0;
-    return `<div class="fo-item"><div class="fo-it"><span class="fo-vg${NV.test(n) ? ' nv2' : ''}"></span><b>${esc(n)}</b><div class="p">${rupees(p)}</div>${PAST_NAMES.has(n) ? '<span class="bs">You’ve ordered this</span>' : ''}</div><div class="fo-pic">${art(itemArt(n, s.art), 78)}${q ? `<div class="fo-stp"><button data-d="-1" data-n="${esc(n)}" aria-label="Remove one">−</button>${q}<button data-d="1" data-n="${esc(n)}" aria-label="Add one">+</button></div>` : `<button class="fo-add" data-d="1" data-n="${esc(n)}">ADD</button>`}</div></div>`;
+    return `<div class="fo-item"><div class="fo-it"><span class="fo-vg${NV.test(n) ? ' nv2' : ''}"></span><b>${esc(n)}</b><div class="p">${rupees(p)}</div>${PAST_NAMES.has(n) ? '<span class="bs">You’ve ordered this</span>' : ''}${tTag(n)}</div><div class="fo-pic">${art(itemArt(n, s.art), 78)}${q ? `<div class="fo-stp"><button data-d="-1" data-n="${esc(n)}" aria-label="Remove one">−</button>${q}<button data-d="1" data-n="${esc(n)}" aria-label="Add one">+</button></div>` : `<button class="fo-add" data-d="1" data-n="${esc(n)}">ADD</button>`}</div></div>`;
   }).join('');
   const top = $('#foBody').scrollTop;
   foShell(`<button class="fo-back" id="foBack" aria-label="Back">${icon.back}</button><span style="flex:1"></span><span class="fo-pill">DECOY</span><button class="fo-x" data-fx aria-label="Close">${icon.x}</button>`,
@@ -870,6 +876,7 @@ function foFacts() {
   f.push({t: `This order is about ${d.kcal.toLocaleString('en-IN')} kcal${T ? `: ${Math.round(d.kcal / T.kcal * 100)}% of your whole day` : ''}.`, s: 'Your food targets'});
   const cnt = d.items.reduce((a, [, q]) => a + q, 0);
   f.push({t: `${rupees(d.total)} for ${cnt} item${cnt > 1 ? 's' : ''} that would be gone in 10 minutes.`, s: 'Your order history: about ₹10,000 in 24 days of November'});
+  D.T_DOWN.forEach(([a, b, c]) => f.push({t: `${a}: ${b.charAt(0).toLowerCase() + b.slice(1)}.`, s: c}));
   D.HARD.slice(3).forEach(h => f.push({t: h.t, s: h.s}));
   return f;
 }
@@ -971,6 +978,19 @@ function targets() {
   return {bmr:Math.round(bmr), tdee:Math.round(tdee), kcal, p, f, c};
 }
 function bar(pct, col) { return `<div class="track"><i style="width:${Math.min(100, Math.max(0, pct*100)).toFixed(1)}%;background:${col}"></i></div>`; }
+function renderTCard(k, t, T) {
+  const names = dayItems(k).map(it => (FOOD[it.id] || {}).name || '').join(' | ');
+  const checks = [
+    ['Whole eggs', /whole egg|omelette/i.test(names)],
+    ['Zinc: meat or chana', /mutton|chicken|kala chana|rajma|chana|soya/i.test(names)],
+    ['Healthy fat: nuts or avocado', /almond|walnut|avocado/i.test(names)],
+    ['Greens', /saag|palak/i.test(names)],
+    ['Fish', /fish/i.test(names)],
+    [T ? `Protein ${Math.round(t.p)} / ${T.p} g` : `Protein ${Math.round(t.p)} g`, T ? t.p >= T.p : false]
+  ];
+  const lowFat = t.kcal > 800 && t.f * 9 / t.kcal < 0.2;
+  $('#tCard').innerHTML = `<div class="tcard"><div class="tc-h"><b>Testosterone foods today</b><span>${checks.filter(c => c[1]).length} of ${checks.length}</span></div><div class="tc-chips">${checks.map(([n, ok]) => `<span class="${ok ? 'ok' : ''}">${ok ? '✓ ' : ''}${esc(n)}</span>`).join('')}</div>${lowFat ? '<p class="tc-w">Fat is under 20% of today’s calories. Low-fat eating cuts testosterone 10–15%: add eggs, nuts or a little ghee.</p>' : ''}</div>`;
+}
 function renderFood() {
   const k = fKey(), t = totals(k), T = targets();
   $('#dLabel').textContent = fDay === 0 ? 'Today' : fDay === 1 ? 'Yesterday' : new Date(k).toLocaleDateString('en-IN', {weekday:'short', day:'numeric', month:'short'});
@@ -982,6 +1002,7 @@ function renderFood() {
   else { $('#kBig').textContent = Math.round(t.kcal).toLocaleString('en-IN'); $('#kLab').textContent = 'kcal eaten'; }
   const M = [['Protein', t.p, T && T.p, '#7ef0b5'], ['Carbs', t.c, T && T.c, '#ffd166'], ['Fat', t.f, T && T.f, '#ff9b85'], ['Fibre', t.fib, 30, '#9fd8bd']];
   $('#macros').innerHTML = M.map(([n, v, tg, col]) => `<div class="mb"><div><span>${n}</span><b>${Math.round(v)}${tg ? ' / ' + tg : ''} g</b></div>${bar(tg ? v/tg : 0, col)}</div>`).join('');
+  renderTCard(k, t, T);
   $('#fNote').innerHTML = T ? '' : `<div class="note">Add your age in <b>Targets</b> below and I’ll work out your calories, protein, carbs and fat from your weight (${curWeight()} kg) and height (${S.prof.h} cm).</div>`;
   // meals
   $('#meals').innerHTML = F.MEALS.map(([id, name]) => {

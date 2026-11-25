@@ -26,7 +26,11 @@ const HARD = [
   ["10 days of McDonald's: about 1,300 gut species gone.", "Spector, 2015"],
   ["You eat about 8 g of salt a day. The limit is 5.", "ICMR-NCDIS, 2023"],
   ["Belly fat turns your testosterone into estrogen.", "Endocrinology of obesity"],
-  ["Most ultra-processed food: 21% higher risk of early death.", "Lane et al., BMJ, 2024"]
+  ["Most ultra-processed food: 21% higher risk of early death.", "Lane et al., BMJ, 2024"],
+  ["5-hour nights for a week: testosterone down 10–15%.", "Leproult & Van Cauter, 2011"],
+  ["Trans fats: lower testosterone, smaller testes.", "Mínguez-Alarcón et al., 2017"],
+  ["Lose the belly fat, get your testosterone back.", "Corona et al., 2013"],
+  ["Low-fat eating cut testosterone 10–15%.", "Whittaker & Wu, 2021"]
 ];
 const now = new Date();
 const hard = HARD[Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / DAY) % HARD.length];

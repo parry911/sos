@@ -179,19 +179,23 @@ window.SOS_DATA = (() => {
     {t:'10 days of McDonald’s: about 1,300 gut species gone.', d:'One student, more than a third of his gut bacterial species, in ten days.', s:'Tim and Tom Spector, 2015'},
     {t:'You eat about 8 g of salt a day. The limit is 5.', d:'That is the Indian average, and sauces, chips and fast food are where most of it hides.', s:'ICMR-NCDIS survey, 2023; WHO'},
     {t:'Belly fat turns your testosterone into estrogen.', d:'Men carrying extra fat have lower testosterone. Losing the fat brings it back.', s:'Endocrinology of obesity'},
-    {t:'Most ultra-processed food: 21% higher risk of early death.', d:'For the people eating the most, from any cause.', s:'Lane et al., BMJ, 2024'}
+    {t:'Most ultra-processed food: 21% higher risk of early death.', d:'For the people eating the most, from any cause.', s:'Lane et al., BMJ, 2024'},
+    {t:'One week of 5-hour nights: testosterone down 10–15%.', d:'Healthy young men, sleep cut to 5 hours for a week. Late-night orders cost you sleep too.', s:'Leproult & Van Cauter, JAMA, 2011'},
+    {t:'Trans fats: lower testosterone, smaller testes.', d:'Young men who ate more trans fat, the kind in reused frying oil and packaged snacks, had lower testosterone and smaller testes.', s:'Mínguez-Alarcón et al., Asian Journal of Andrology, 2017'},
+    {t:'Lose the belly fat, get your testosterone back.', d:'Across studies, the more weight men lost, the more their testosterone rose.', s:'Corona et al., European Journal of Endocrinology, 2013'},
+    {t:'Low-fat eating cut testosterone 10–15%.', d:'Men moved from 40% to 20% fat saw it fall. Keep the egg yolks, nuts and a little ghee.', s:'Whittaker & Wu, 2021'}
   ];
 
 
   // Strictly from his Sep–Nov 2026 Swiggy, Zomato, Blinkit and Instamart orders.
   const NEVER = [
-    {t:'Taco Bell', d:'Chalupa, nachos & salsa, nuggets & Lava dip, churros, Diablo sauce', n:'9 orders'},
-    {t:'Fried chicken & burgers', d:'KFC popcorn & Zinger, Popeyes burgers & wings, Whopper, McChicken, Fish ’N’ Chips, chicken strips, aloo tikki burger, vada pav'},
-    {t:'Shakes & sweet coffee', d:'Cookie crumble, hazelnut & chocolate thickshakes, Dark Lord shake, hazelnut lattes'},
-    {t:'Ice cream & cake', d:'Baskin Robbins (4 orders), Mercely’s, Amul & NIC tubs, Go Zero, Theobroma cake, brownies, Subway cookies, Cinnabon'},
-    {t:'Packet crunch', d:'Cornitos nachos (4 orders), Doritos, Lay’s, Uncle Chipps, Bikano, Crax, Hide & Seek, “protein” puffs, chips & bars'},
-    {t:'Fizz & sauces', d:'Nimbooz (4 orders), Limca, ketchup, Veeba spread, Lava & Diablo sauce'},
-    {t:'Takeaway Chinese & pizza', d:'Chilli paneer, chilli chicken, hakka noodles, chopsuey, honey chilli potato, spring rolls, Pino’z pizza, mac & cheese'},
+    {tm:'Fried + sugar: testosterone ↓', t:'Taco Bell', d:'Chalupa, nachos & salsa, nuggets & Lava dip, churros, Diablo sauce', n:'9 orders'},
+    {tm:'Fried oil, trans fats: testosterone ↓', t:'Fried chicken & burgers', d:'KFC popcorn & Zinger, Popeyes burgers & wings, Whopper, McChicken, Fish ’N’ Chips, chicken strips, aloo tikki burger, vada pav'},
+    {tm:'Sugar load: testosterone ↓ 25%', t:'Shakes & sweet coffee', d:'Cookie crumble, hazelnut & chocolate thickshakes, Dark Lord shake, hazelnut lattes'},
+    {tm:'Sugar load: testosterone ↓ 25%', t:'Ice cream & cake', d:'Baskin Robbins (4 orders), Mercely’s, Amul & NIC tubs, Go Zero, Theobroma cake, brownies, Subway cookies, Cinnabon'},
+    {tm:'Trans fats: testosterone ↓', t:'Packet crunch', d:'Cornitos nachos (4 orders), Doritos, Lay’s, Uncle Chipps, Bikano, Crax, Hide & Seek, “protein” puffs, chips & bars'},
+    {tm:'Sugar: testosterone ↓', t:'Fizz & sauces', d:'Nimbooz (4 orders), Limca, ketchup, Veeba spread, Lava & Diablo sauce'},
+    {tm:'Fried oil: testosterone ↓', t:'Takeaway Chinese & pizza', d:'Chilli paneer, chilli chicken, hakka noodles, chopsuey, honey chilli potato, spring rolls, Pino’z pizza, mac & cheese'},
     {t:'Processed meat & cheese', d:'Chicken salami, chicken breakfast sausages, cheese slices'}
   ];
   const EAT = [
@@ -201,8 +205,8 @@ window.SOS_DATA = (() => {
     {t:'Grilled chicken & rice', d:'The bowl, not the burger (Burgrill)'},
     {t:'Paneer, dahi, bran bread, lauki', d:'From your grocery runs: cook these at home'}
   ];
-  const TICK_NEVER = ['Taco Bell chalupa','Nuggets & Lava dip','Cornitos nachos','KFC popcorn','Popeyes burger','Whopper','Hazelnut latte','Thickshakes','Baskin Robbins','Theobroma cake','Nimbooz','Protein puffs','Chilli paneer','Pino’z pizza','Chicken salami'];
-  const TICK_EAT = ['Keema burger at home','Makki nachos & salsa','Air-fryer chicken bites','Chocolate whey soft-serve','Protein cold coffee','Ghee makhana','Shikanji soda','Tandoori fish tikka','Paneer bhurji & roti','Rajma chawal','Egg bhurji','Steamed chicken momos','Palak paneer','Dahi with banana','Almonds & walnuts'];
+  const TICK_NEVER = ['Sugary thickshakes (testosterone ↓)','Fried nuggets (trans fats)','Taco Bell chalupa','Nuggets & Lava dip','Cornitos nachos','KFC popcorn','Popeyes burger','Whopper','Hazelnut latte','Thickshakes','Baskin Robbins','Theobroma cake','Nimbooz','Protein puffs','Chilli paneer','Pino’z pizza','Chicken salami'];
+  const TICK_EAT = ['Whole eggs, yolks in (testosterone ↑)','Mutton or chicken (zinc)','Keema burger at home','Makki nachos & salsa','Air-fryer chicken bites','Chocolate whey soft-serve','Protein cold coffee','Ghee makhana','Shikanji soda','Tandoori fish tikka','Paneer bhurji & roti','Rajma chawal','Egg bhurji','Steamed chicken momos','Palak paneer','Dahi with banana','Almonds & walnuts'];
   const EVERYDAY = [
     ['Protein', 'Eggs (whole, whites, omelette or bhurji) · NAKPRO whey · paneer bhurji, matar or palak paneer · soya chunks · chicken curry or dry chicken · fish tikka or fish gravy · mutton gravy'],
     ['Dal & chana', 'Home dal · black dal · rajma · white chana · kala chana · kadhi · chana salad'],
@@ -306,7 +310,24 @@ window.SOS_DATA = (() => {
     'Nuts': 'Walnuts carry plant omega-3, almonds magnesium. A handful of roasted chana: 6.5 g protein.'
   };
 
+
+  const T_UP = [
+    ['Whole eggs, yolks in', 'Vitamin D and the cholesterol testosterone is built from'],
+    ['Fish tikka, fish gravy', 'Vitamin D and omega-3'],
+    ['Mutton, chicken, kala chana, rajma, soya', 'Zinc: men short on zinc have lower testosterone'],
+    ['Almonds, walnuts, avocado, a little ghee', 'Healthy fat and magnesium: low-fat eating lowers testosterone'],
+    ['Saag and leafy greens', 'Magnesium'],
+    ['Paneer, dahi, whey, dry chicken', 'Protein that turns your testosterone into muscle']
+  ];
+  const T_DOWN = [
+    ['Sugar loads: shakes, ice cream, cake, soda', 'Testosterone down about 25% within 2 hours', 'Caronia et al., 2013'],
+    ['Deep-fried food in reused oil, packet snacks', 'Trans fats: lower testosterone, smaller testes', 'Mínguez-Alarcón et al., 2017'],
+    ['Belly fat', 'Turns testosterone into estrogen; losing it brings testosterone back', 'Corona et al., 2013'],
+    ['Late-night orders and short sleep', 'A week of 5-hour nights: testosterone down 10–15%', 'Leproult & Van Cauter, 2011'],
+    ['Crash dieting and very low fat', 'Low-fat eating: testosterone down 10–15%', 'Whittaker & Wu, 2021']
+  ];
+
   const TRIGGERS = ['Late night','Bored','Stressed','After a test','With friends','Actually hungry','Other'];
 
-  return {RATE, FALLBACK_START, TRACK0, HISTORY, MILES, ORGANS, DECKS, REELS, FLIPS, KITCHEN, TRIGGERS, HARD, NEVER, EAT, TICK_NEVER, TICK_EAT, EVERYDAY, SHOPS, PAST, GOOD, BAD, KWHY, EATWHY, EVERYWHY};
+  return {RATE, FALLBACK_START, TRACK0, HISTORY, MILES, ORGANS, DECKS, REELS, FLIPS, KITCHEN, TRIGGERS, HARD, NEVER, EAT, TICK_NEVER, TICK_EAT, EVERYDAY, SHOPS, PAST, GOOD, BAD, KWHY, EATWHY, EVERYWHY, T_UP, T_DOWN};
 })();
