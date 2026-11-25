@@ -164,6 +164,13 @@
 </div></section>
 
 <!-- TAB BAR -->
+<div class="eatbar" id="eatbar">
+  <button class="eb-lists" id="eatLists" aria-label="Never and eat lists from your order history">
+    <span class="eb-row"><i class="eb-x">NEVER</i><span id="ebNever">Taco Bell chalupa</span></span>
+    <span class="eb-row"><i class="eb-ok">EAT</i><span id="ebEat">Tandoori fish tikka</span></span>
+  </button>
+  <button class="eb-order" id="eatOrder" aria-label="Open the decoy ordering app"><b id="ebOrdB">Order</b><small id="ebOrdS">decoy</small></button>
+</div>
 <nav class="tabs" id="tabs">
   <button class="tab on" data-tab="body"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><path d="M12 8v7M7 10h10M9 22l3-7 3 7"/></svg>Body</button>
   <button class="tab" data-tab="food"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M9 7c0-2 2-2 2-4M13 7c0-2 2-2 2-4"/></svg>Food</button>
@@ -266,6 +273,11 @@
   </div>
 </section>
 
+<section class="ov hide fo" id="fo" role="dialog" aria-modal="true" aria-label="Decoy ordering">
+  <div class="fo-top" id="foTop"></div>
+  <div class="fo-body" id="foBody"></div>
+  <div class="fo-bar" id="foBar"></div>
+</section>
 <div id="layer"></div>
 <script src="data.js"></script>
 <script src="foods.js"></script>

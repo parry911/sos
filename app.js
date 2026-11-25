@@ -644,7 +644,7 @@ function queueSync(day) {
   clearTimeout(syncT); syncT = setTimeout(flushSync, 4000);
 }
 function snapshot(day) {
-  if (!dayItems(day).length && !S.weights.some(x => x.d === day) && !S.urges.some(u => dkey(u.at) === day) && !S.slips.some(x => dkey(x.at) === day)) return null;
+  if (!dayItems(day).length && !S.weights.some(x => x.d === day) && !S.urges.some(u => dkey(u.at) === day) && !S.slips.some(x => dkey(x.at) === day) && !(S.decoys || []).some(x => dkey(x.at) === day)) return null;
   const lines = ['SOS | ' + day];
   F.MEALS.forEach(([id, name]) => {
     const its = dayItems(day).filter(x => x.meal === id); if (!its.length) return;
@@ -656,6 +656,7 @@ function snapshot(day) {
   const w = S.weights.find(x => x.d === day); if (w) lines.push('Weight: ' + w.kg + ' kg');
   const urges = S.urges.filter(u => dkey(u.at) === day), won = urges.filter(u => u.outcome === 'won' || u.outcome === 'real').length;
   if (urges.length) lines.push(`Cravings: ${urges.length}, rode out ${won}`);
+  const dec = (S.decoys || []).filter(x => dkey(x.at) === day); if (dec.length) lines.push(`Decoy orders: ${dec.length} (${dec.map(x => x.shop).join(', ')}): ${rupees(dec.reduce((a, x) => a + x.total, 0))} not spent, about ${dec.reduce((a, x) => a + x.kcal, 0)} kcal not eaten`);
   S.slips.filter(x => dkey(x.at) === day).forEach(x => lines.push(`Slip at ${new Date(x.at).toLocaleTimeString('en-IN', {hour:'numeric', minute:'2-digit'})}${x.trigger ? ' (' + x.trigger + ')' : ''}${x.after && x.after.length ? ', 20 min later felt ' + x.after.join(', ').toLowerCase() : ''}`));
   if (day === dkey(new Date())) lines.push('Junk-free streak so far: ' + dur(streakMs()));
   return lines.join('\n');
@@ -688,6 +689,199 @@ $('#syncSave').onclick = () => {
   S.syncPending = ['ping', dkey(y), today]; save(); flushSync(); renderSync(); toast('Connected. A test row is on its way to your sheet.');
 };
 window.addEventListener('online', flushSync);
+
+/* ---------- Never / Eat bar on Home ---------- */
+let ebI = 0;
+function ebSet(id, list, i) { const el = $(id); el.classList.add('fade'); setTimeout(() => { el.textContent = list[i % list.length]; el.classList.remove('fade'); }, 350); }
+setInterval(() => {
+  if (document.hidden || !$('#body').classList.contains('on') || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  ebI++; ebSet('#ebNever', D.TICK_NEVER, ebI); setTimeout(() => ebSet('#ebEat', D.TICK_EAT, ebI), 600);
+}, 3400);
+function listsSheet(eatFirst) {
+  const never = `<div class="q" style="font-size:28px">Never again</div><p>Straight from your Swiggy, Zomato, Blinkit and Instamart orders, Sep–Nov 2026.</p><div class="nl">${D.NEVER.map(x => `<div class="nv"><b>${esc(x.t)}${x.n ? `<i>${esc(x.n)}</i>` : ''}</b><span>${esc(x.d)}</span></div>`).join('')}</div>`;
+  const eat = `<div class="q" style="font-size:28px;margin-top:${eatFirst ? 8 : 24}px" id="eatH">Safe to eat</div><p>The few things in that same history that were actually fine.</p><div class="nl">${D.EAT.map(x => `<div class="ev"><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div>`).join('')}</div>`;
+  sheet((eatFirst ? eat + '<div style="height:8px"></div>' + never : never + eat) + '<button class="btn dim full" id="shClose">Close</button>', () => { $('#shClose').onclick = closeSheet; });
+}
+$('#eatLists').onclick = () => listsSheet(false);
+$('#eatOrder').onclick = () => foOpen();
+function renderEatbar() {
+  const live = !!S.decoy;
+  $('#eatOrder').classList.toggle('live', live);
+  $('#ebOrdB').textContent = live ? 'Track' : 'Order'; $('#ebOrdS').textContent = live ? 'on the way' : 'decoy';
+}
+
+/* ---------- decoy ordering app ---------- */
+const SHOP = Object.fromEntries(D.SHOPS.map(s => [s.id, s]));
+const DECOY_MS = (new URLSearchParams(location.search).get('decoyFast') ? 0.4 : 15) * MIN;
+const FO_CATS = [['Tacos', /taco|nacho|chalupa/i, 'chips'], ['Burgers', /burger|whopper|mcchicken|mcaloo|sandwich/i, 'burger'], ['Fried chicken', /nugget|popcorn|wings|strips|zinger|chicken burger/i, 'drum'], ['Shakes', /shake/i, 'glass'], ['Ice cream', /ice cream|scoop/i, 'cup'], ['Chips', /chips|lay's|doritos|puffs|namkeen|cornitos/i, 'chips'], ['Chinese', /noodles|chilli|chopsuey|honey|spring roll/i, 'bowl'], ['Coffee', /latte|coffee/i, 'glass'], ['Cakes', /cake|brownie|cookie|minibon|churros|milano/i, 'cup']];
+const NV = /chicken|nugget|fish|zinger|whopper|mcchicken|salami|seekh|wings|popcorn|chalupa|chipotle/i;
+const PAST_NAMES = new Set(D.PAST.flatMap(o => o.items));
+let fo = {cart: null, cat: null, q: '', timer: 0, factI: 0};
+const itemArt = (n, k) => /shake|latte|soda|nimbooz|limca|pepsi/i.test(n) ? 'glass' : /ice cream|cake|brownie|cookie|minibon|churros|milano|go zero/i.test(n) ? 'cup' : /nugget|popcorn|wings|strips|zinger|fish/i.test(n) ? 'drum' : /burger|whopper|mcchicken|mcaloo|sandwich|vada pav|pizza|wrap/i.test(n) ? 'burger' : /sauce|dip$|ketchup/i.test(n) ? 'jar' : /noodles|chilli|chopsuey|roll|potato/i.test(n) ? 'bowl' : /nacho|chips|lay's|doritos|puffs|namkeen|taco|chalupa|twists/i.test(n) ? 'chips' : k;
+const art = (k, size) => (ART[k] || ART.burger)().replace('<svg', `<svg width="${size}" height="${size}"`);
+const icon = {
+  x: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1b1e1c" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  back: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1b1e1c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  pin: '<svg width="22" height="22" viewBox="0 0 24 24" fill="#0b7a50"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>',
+  search: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0b7a50" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>',
+  bike: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17" r="3"/><circle cx="18.5" cy="17" r="3"/><path d="M8.5 17h6l-3-7h4l3 7M11.5 10l-2-3H7"/></svg>',
+  shop: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 10h16v10H4zM3 4h18l-1 6H4z"/></svg>',
+  home: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M3 11l9-7 9 7v9H3z"/></svg>',
+  check: '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
+};
+const itemOf = (shop, name) => SHOP[shop].items.find(i => i[0] === name);
+function cartLines() { return fo.cart ? Object.entries(fo.cart.lines).filter(([, q]) => q > 0) : []; }
+function cartCount() { return cartLines().reduce((a, [, q]) => a + q, 0); }
+function bill() {
+  const lines = cartLines(), sh = fo.cart && SHOP[fo.cart.shop];
+  const items = lines.reduce((a, [n, q]) => a + itemOf(sh.id, n)[1] * q, 0), kcal = lines.reduce((a, [n, q]) => a + itemOf(sh.id, n)[2] * q, 0);
+  const h = new Date().getHours(), late = h >= 23 || h < 5 ? 35 : 0, plat = 10, del = sh && sh.id === 'snack' ? 0 : 30, gst = Math.round(items * 0.05);
+  return {items, kcal, late, plat, del, gst, total: items + late + plat + del + gst};
+}
+function setQty(shop, name, d) {
+  if (!fo.cart || fo.cart.shop !== shop) { if (fo.cart && cartCount() && d > 0) toast('Cart cleared: one restaurant at a time.'); fo.cart = {shop, lines: {}}; }
+  fo.cart.lines[name] = Math.max(0, (fo.cart.lines[name] || 0) + d);
+}
+function foShell(top, body, bar, grey) {
+  $('#foTop').innerHTML = top; $('#foBody').innerHTML = body; $('#foBar').innerHTML = bar || '';
+  $('#foBody').classList.toggle('grey', !!grey); $('#foBody').scrollTop = 0;
+  $$('#fo [data-fx]').forEach(b => b.onclick = foClose);
+}
+function foOpen() {
+  FX.stop(); $('#fo').classList.remove('hide');
+  if (S.decoy) { Date.now() - new Date(S.decoy.at) >= DECOY_MS ? foEnd() : foTrack(); } else foHome();
+}
+function foClose() { clearInterval(fo.timer); $('#fo').classList.add('hide'); renderEatbar(); }
+function foCartBar() {
+  const n = cartCount(); if (!n) return '';
+  return `<button class="fo-cb" id="foCartBtn"><span>${n} item${n > 1 ? 's' : ''} added<small>${esc(SHOP[fo.cart.shop].name)}</small></span><span>${rupees(bill().items)} · View cart ›</span></button>`;
+}
+function foWireBar() { const b = $('#foCartBtn'); if (b) b.onclick = foCart; }
+function shopCard(s) {
+  const tag = s.failed ? `<div class="w">${s.failed} failed payment${s.failed > 1 ? 's' : ''}, you retried every time</div>` : '';
+  return `<button class="fo-shop" data-shop="${s.id}"><span class="fo-img">${art(s.art, 84)}<em>${s.times}× ordered</em></span><span class="fo-sb"><b>${esc(s.name)}</b><span class="m">⏱ ${esc(s.eta)} · ${esc(s.area)}</span><span class="c">${esc(s.cuisine)}</span>${tag}</span></button>`;
+}
+function foHome() {
+  const cats = FO_CATS.map(([n, , a], i) => `<button class="fo-cat${fo.cat === i ? ' sel' : ''}" data-cat="${i}"><i>${art(a, 44)}</i>${n}</button>`).join('');
+  const again = D.PAST.map((o, i) => `<button class="fo-ag" data-again="${i}"><b>${esc(SHOP[o.shop].name)}</b><span class="it">${esc(o.items.join(', '))}</span><span class="meta">${rupees(o.total)} · ${esc(o.when)}</span>${o.note ? `<span class="warn">${esc(o.note)}</span>` : ''}<span class="re"><i>Reorder</i></span></button>`).join('');
+  let shops = [...D.SHOPS].sort((a, b) => b.times - a.times);
+  if (fo.cat !== null) shops = shops.filter(s => s.items.some(i => FO_CATS[fo.cat][1].test(i[0])));
+  foShell(`<span>${icon.pin}</span><span class="fo-loc"><b>Home ⌄</b><span>Mohali · deliver in minutes</span></span><span class="fo-pill">DECOY</span><button class="fo-x" data-fx aria-label="Close">${icon.x}</button>`,
+    `<label class="fo-search">${icon.search}<input id="foQ" placeholder="Search for ‘chalupa’" value="${esc(fo.q)}" autocomplete="off"></label><div id="foRes"></div>
+     <div id="foMain"><div class="fo-h">Order again<small>Your real orders, exactly as you placed them</small></div><div class="fo-again">${again}</div>
+     <div class="fo-h">What’s on your mind?</div><div class="fo-cats">${cats}</div>
+     <div class="fo-h">${fo.cat !== null ? esc(FO_CATS[fo.cat][0]) + ' you order' : 'Restaurants you order from'}<small>Sorted by how often you ordered, Sep–Nov</small></div>${shops.map(shopCard).join('')}</div>`, foCartBar());
+  foWireBar();
+  $$('#fo [data-shop]').forEach(b => b.onclick = () => foShop(b.dataset.shop));
+  $$('#fo [data-cat]').forEach(b => b.onclick = () => { const i = +b.dataset.cat; fo.cat = fo.cat === i ? null : i; foHome(); });
+  $$('#fo [data-again]').forEach(b => b.onclick = () => { const o = D.PAST[+b.dataset.again]; fo.cart = {shop: o.shop, lines: {}}; o.items.forEach(n => setQty(o.shop, n, 1)); foCart(); });
+  const q = $('#foQ');
+  q.oninput = () => {
+    fo.q = q.value; const t = q.value.trim().toLowerCase();
+    $('#foMain').classList.toggle('hide', !!t);
+    $('#foRes').innerHTML = t ? D.SHOPS.flatMap(s => s.items.filter(i => i[0].toLowerCase().includes(t) || s.name.toLowerCase().includes(t)).map(i => `<button class="fo-res" data-shop="${s.id}"><b>${esc(i[0])}</b><span>${esc(s.name)} · ${rupees(i[1])}</span></button>`)).join('') || '<p style="padding:16px;color:#6b726e">Nothing like that in your order history.</p>' : '';
+    $$('#foRes [data-shop]').forEach(b => b.onclick = () => foShop(b.dataset.shop));
+  };
+  if (fo.q) q.oninput();
+}
+function foShop(id) {
+  const s = SHOP[id];
+  const rows = s.items.map(([n, p]) => {
+    const q = fo.cart && fo.cart.shop === id ? (fo.cart.lines[n] || 0) : 0;
+    return `<div class="fo-item"><div class="fo-it"><span class="fo-vg${NV.test(n) ? ' nv2' : ''}"></span><b>${esc(n)}</b><div class="p">${rupees(p)}</div>${PAST_NAMES.has(n) ? '<span class="bs">You’ve ordered this</span>' : ''}</div><div class="fo-pic">${art(itemArt(n, s.art), 78)}${q ? `<div class="fo-stp"><button data-d="-1" data-n="${esc(n)}" aria-label="Remove one">−</button>${q}<button data-d="1" data-n="${esc(n)}" aria-label="Add one">+</button></div>` : `<button class="fo-add" data-d="1" data-n="${esc(n)}">ADD</button>`}</div></div>`;
+  }).join('');
+  const top = $('#foBody').scrollTop;
+  foShell(`<button class="fo-back" id="foBack" aria-label="Back">${icon.back}</button><span style="flex:1"></span><span class="fo-pill">DECOY</span><button class="fo-x" data-fx aria-label="Close">${icon.x}</button>`,
+    `<div class="fo-mh"><b>${esc(s.name)}</b><span>${esc(s.cuisine)}</span><span>⏱ ${esc(s.eta)} · ${esc(s.area)}</span><span class="ord">You ordered here ${s.times} time${s.times > 1 ? 's' : ''}${s.failed ? ` · retried after ${s.failed} failed payment${s.failed > 1 ? 's' : ''}` : ''}</span></div><div class="fo-h" style="margin-top:14px">Your usual</div>${rows}`, foCartBar());
+  $('#foBody').scrollTop = fo.lastShop === id ? top : 0; fo.lastShop = id;
+  $('#foBack').onclick = () => { fo.lastShop = null; foHome(); };
+  foWireBar();
+  $$('#fo [data-d]').forEach(b => b.onclick = () => { setQty(id, b.dataset.n, +b.dataset.d); foShop(id); });
+}
+function foCart() {
+  const lines = cartLines(); if (!lines.length) { foHome(); return; }
+  const s = SHOP[fo.cart.shop], B = bill();
+  const rows = lines.map(([n, q]) => `<div class="fo-cl"><span class="fo-vg${NV.test(n) ? ' nv2' : ''}"></span><span class="n">${esc(n)}</span><span class="fo-s2"><button data-d="-1" data-n="${esc(n)}" aria-label="Remove one">−</button>${q}<button data-d="1" data-n="${esc(n)}" aria-label="Add one">+</button></span><span class="pr">${rupees(itemOf(s.id, n)[1] * q)}</span></div>`).join('');
+  foShell(`<button class="fo-back" id="foBack" aria-label="Back">${icon.back}</button><span class="fo-loc"><b style="font-size:16px">${esc(s.name)}</b><span>${esc(s.eta)} to Home</span></span><button class="fo-x" data-fx aria-label="Close">${icon.x}</button>`,
+    `<div class="fo-sec">${rows}<button id="foMore" style="margin-top:6px;font-weight:700;color:#0b7a50">+ Add more items</button></div>
+     <div class="fo-sec"><h4>Bill details</h4><div class="fo-bl"><div><span>Item total</span><span>${rupees(B.items)}</span></div><div><span>Delivery fee</span><span>${B.del ? rupees(B.del) : '<s>₹30</s><span class="free">FREE</span>'}</span></div>${B.late ? `<div><span>Late night fee</span><span>${rupees(B.late)}</span></div>` : ''}<div><span>Platform fee</span><span>${rupees(B.plat)}</span></div><div><span>GST and restaurant charges</span><span>${rupees(B.gst)}</span></div><div class="tot"><span>To pay</span><span>${rupees(B.total)}</span></div></div></div>
+     <div class="fo-sec"><h4>Delivering to Home</h4><div style="font-size:14px;color:#4a514d">Mohali · pay by UPI</div></div>`,
+    `<div class="fo-sl" id="foSl"><div class="fo-fl" id="foFl"></div><span>Slide to pay ${rupees(B.total)}</span><div class="fo-kn" id="foKn"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#062015" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div></div>`, true);
+  $('#foBack').onclick = () => foShop(s.id); $('#foMore').onclick = () => foShop(s.id);
+  $$('#fo [data-d]').forEach(b => b.onclick = () => { setQty(s.id, b.dataset.n, +b.dataset.d); foCart(); });
+  const sl = $('#foSl'), kn = $('#foKn'), fl = $('#foFl'); let x0 = null, dx = 0;
+  const max = () => sl.clientWidth - kn.clientWidth - 10;
+  kn.onpointerdown = e => { x0 = e.clientX; dx = 0; kn.setPointerCapture(e.pointerId); kn.style.transition = fl.style.transition = 'none'; };
+  kn.onpointermove = e => { if (x0 === null) return; dx = Math.max(0, Math.min(max(), e.clientX - x0)); kn.style.transform = `translateX(${dx}px)`; fl.style.width = (dx + 30) + 'px'; };
+  kn.onpointerup = kn.onpointercancel = () => { if (x0 === null) return; x0 = null; if (dx > max() * 0.82) { kn.style.transform = `translateX(${max()}px)`; foPay(); } else { kn.style.transition = fl.style.transition = 'transform .25s, width .25s'; kn.style.transform = ''; fl.style.width = '0'; } };
+}
+function foPay() {
+  const s = SHOP[fo.cart.shop], B = bill();
+  S.decoy = {shop: s.id, name: s.name, items: cartLines(), total: B.total, kcal: B.kcal, at: new Date().toISOString(), ratings: []};
+  save(); fo.cart = null; renderEatbar();
+  foShell('', `<div class="fo-done"><div class="fo-spin"></div><h2>Placing your order…</h2><p>${esc(s.name)} · ${rupees(B.total)}</p></div>`, '');
+  setTimeout(() => {
+    if ($('#fo').classList.contains('hide')) return;
+    foShell('', `<div class="fo-done"><div class="fo-ck">${icon.check}</div><h2>Order placed</h2><p>${esc(s.name)} is getting it ready</p></div>`, '');
+    setTimeout(() => { if (!$('#fo').classList.contains('hide') && S.decoy) foTrack(); }, 1700);
+  }, 1500);
+}
+function foFacts() {
+  const d = S.decoy, T = targets(), f = [];
+  f.push({t: `This order is about ${d.kcal.toLocaleString('en-IN')} kcal${T ? `: ${Math.round(d.kcal / T.kcal * 100)}% of your whole day` : ''}.`, s: 'Your food targets'});
+  const cnt = d.items.reduce((a, [, q]) => a + q, 0);
+  f.push({t: `${rupees(d.total)} for ${cnt} item${cnt > 1 ? 's' : ''} that would be gone in 10 minutes.`, s: 'Your order history: about ₹10,000 in 24 days of November'});
+  D.HARD.slice(3).forEach(h => f.push({t: h.t, s: h.s}));
+  return f;
+}
+function foTrack() {
+  const d = S.decoy; if (!d) { foHome(); return; }
+  const facts = foFacts();
+  const rate = Array.from({length: 10}, (_, i) => `<button data-r="${i + 1}">${i + 1}</button>`).join('');
+  foShell(`<span class="fo-loc"><b style="font-size:16px">${esc(d.name)}</b><span>${d.items.map(([n, q]) => (q > 1 ? q + ' × ' : '') + n).join(', ')}</span></span><button class="fo-x" data-fx aria-label="Close">${icon.x}</button>`,
+    `<div class="fo-trk"><small>Order placed · ${rupees(d.total)}</small><b id="foEta">Arriving in 15 mins</b><div class="fo-rt"><span class="fo-end1">${icon.shop}</span><span class="fo-rp" id="foRp"></span><span class="fo-rd" id="foRd">${icon.bike}</span><span class="fo-end2">${icon.home}</span></div></div>
+     <div class="fo-sec"><div class="fo-stg" id="foStg"></div></div>
+     <div class="fo-sec"><h4>How strong is the craving right now?</h4><div class="fo-rate" id="foRate">${rate}</div><div id="foRt" style="font-size:13px;color:#6b726e;margin-top:8px"></div></div>
+     <div class="fo-sec" style="padding:0;border:0;background:none"><div class="fo-fact" id="foFact"></div></div>
+     <button class="fo-cancel" id="foCancel">Cancel order</button>`, '', true);
+  const showFact = () => { const x = facts[fo.factI++ % facts.length], el = $('#foFact'); if (!el) return; el.style.opacity = 0; setTimeout(() => { el.innerHTML = `<b>${esc(x.t)}</b><small>${esc(x.s)}</small>`; el.style.opacity = 1; }, 300); };
+  showFact();
+  const paintR = () => { const r = S.decoy && S.decoy.ratings; if (!r) return; $('#foRt').textContent = r.length ? 'So far: ' + r.map(x => x.v).join(' → ') : 'Rate it now, and again every few minutes. Watch it fall.'; };
+  paintR();
+  $$('#foRate [data-r]').forEach(b => b.onclick = () => { $$('#foRate button').forEach(x => x.classList.toggle('sel', x === b)); S.decoy.ratings.push({at: Date.now(), v: +b.dataset.r}); save(); paintR(); });
+  $('#foCancel').onclick = () => foFinish('cancelled');
+  const stages = [[0, 'Order confirmed'], [1, 'Food is being prepared'], [5, 'Rider assigned'], [8, 'Order picked up'], [10, 'On the way to you'], [14, 'Arriving now']];
+  const tickT = () => {
+    if (!S.decoy) return; const el = Date.now() - new Date(S.decoy.at), p = Math.min(1, el / DECOY_MS);
+    if (el >= DECOY_MS) { clearInterval(fo.timer); foEnd(); return; }
+    const left = Math.max(1, Math.ceil((DECOY_MS - el) / MIN)), m = el / DECOY_MS * 15;
+    $('#foEta').textContent = left <= 1 ? 'Arriving in under a minute' : `Arriving in ${left} mins`;
+    const w = $('.fo-rt').clientWidth - 40; $('#foRp').style.width = (w * p) + 'px'; $('#foRd').style.left = (20 + w * p) + 'px';
+    $('#foStg').innerHTML = stages.map(([t, n]) => `<div class="${m >= t ? 'on' : ''}">${n}</div>`).join('');
+    if (Math.floor(el / 9000) !== fo.lastFact) { fo.lastFact = Math.floor(el / 9000); if (el > 1000) showFact(); }
+  };
+  clearInterval(fo.timer); tickT(); fo.timer = setInterval(tickT, 1000);
+}
+function foFinish(outcome) {
+  const d = S.decoy; if (!d) return; clearInterval(fo.timer);
+  S.decoys = S.decoys || [];
+  S.decoys.unshift({at: d.at, shop: d.name, items: d.items, total: d.total, kcal: d.kcal, ratings: d.ratings.map(r => r.v), outcome});
+  S.urges.unshift({at: d.at, want: 'decoy order: ' + d.name, hungry: null, ratings: d.ratings.map(r => r.v), outcome: 'won'});
+  S.decoy = null; save(); queueSync(dkey(d.at)); renderEatbar();
+  foEnd(S.decoys[0]);
+}
+function foEnd(rec) {
+  if (!rec) { if (S.decoy) { foFinish('waited'); return; } foHome(); return; }
+  const r = rec.ratings, cancelled = rec.outcome === 'cancelled';
+  foShell(`<span style="flex:1"></span><button class="fo-x" data-fx aria-label="Close">${icon.x}</button>`,
+    `<div class="fo-end"><span class="fo-pill">DECOY</span><h2>${cancelled ? 'Cancelled. Nothing was ever coming.' : 'Your order isn’t coming. It never was.'}</h2>
+     <p>${cancelled ? 'You chose, you browsed, you paid in your head, and then you walked away. That’s the whole craving, handled.' : 'The wanting rose, peaked and passed while you watched a rider who doesn’t exist. That was the wave, ridden out.'}</p>
+     <div class="fo-sts"><div class="fo-st"><b>${rupees(rec.total)}</b><span>stays with you</span></div><div class="fo-st"><b>${rec.kcal.toLocaleString('en-IN')}</b><span>kcal you didn’t eat</span></div>${r.length > 1 ? `<div class="fo-st" style="grid-column:1/-1"><b>${r[0]} → ${r[r.length - 1]}</b><span>your craving, start to finish</span></div>` : ''}</div>
+     <button class="fo-btn dark" id="foReal">Show me what I can eat</button><button class="fo-btn lite" data-fx>Done</button></div>`, '');
+  $('#foReal').onclick = () => { foClose(); listsSheet(true); };
+  renderAll();
+}
+if (new URLSearchParams(location.search).get('go') === 'order') setTimeout(foOpen, 300);
 
 /* ---------- celebrations ---------- */
 let confT = 0;
@@ -918,6 +1112,7 @@ function tick() {
 function switchTab(t) {
   if (t !== 'reels') { stopReel(); FX.stop(); }
   $$('.screen').forEach(s => s.classList.toggle('on', s.id === t));
+  $('#eatbar').classList.toggle('hide', t !== 'body');
   $$('.tab[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   if (t === 'reels') { reelOrder = shuffle(D.REELS); renderReels(); }
   if (t === 'stories') renderStoryList();
@@ -934,7 +1129,7 @@ function renderMotto() {
   $('#mT').textContent = h.t; $('#mS').textContent = h.d; $('#mSrc').textContent = h.s;
 }
 $('#hard').onclick = () => { hardI = (hardI === null ? 0 : hardI) + 1; renderMotto(); };
-function renderAll() { renderMotto(); renderFoodCard(); if ($('#food').classList.contains('on')) renderFood(); renderStoryRow(); renderComeback(); renderFund(); renderBodyMap(); renderWeekCard(); tick(); if ($('#you').classList.contains('on')) renderYou(); if ($('#stories').classList.contains('on')) renderStoryList(); }
+function renderAll() { renderMotto(); renderFoodCard(); if ($('#food').classList.contains('on')) renderFood(); renderStoryRow(); renderComeback(); renderFund(); renderEatbar(); renderBodyMap(); renderWeekCard(); tick(); if ($('#you').classList.contains('on')) renderYou(); if ($('#stories').classList.contains('on')) renderStoryList(); }
 
 /* ---------- start ---------- */
 if (!standalone() && !S.gateSkipped) $('#gate').classList.remove('hide');

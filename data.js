@@ -182,7 +182,91 @@ window.SOS_DATA = (() => {
     {t:'Most ultra-processed food: 21% higher risk of early death.', d:'For the people eating the most, from any cause.', s:'Lane et al., BMJ, 2024'}
   ];
 
+
+  // Strictly from his Sep–Nov 2026 Swiggy, Zomato, Blinkit and Instamart orders.
+  const NEVER = [
+    {t:'Taco Bell', d:'Chalupa, nachos & salsa, nuggets & Lava dip, churros, Diablo sauce', n:'9 orders'},
+    {t:'Fried chicken & burgers', d:'KFC popcorn & Zinger, Popeyes burgers & wings, Whopper, McChicken, Fish ’N’ Chips, chicken strips, aloo tikki burger, vada pav'},
+    {t:'Shakes & sweet coffee', d:'Cookie crumble, hazelnut & chocolate thickshakes, Dark Lord shake, hazelnut lattes'},
+    {t:'Ice cream & cake', d:'Baskin Robbins (4 orders), Mercely’s, Amul & NIC tubs, Go Zero, Theobroma cake, brownies, Subway cookies, Cinnabon'},
+    {t:'Packet crunch', d:'Cornitos nachos (4 orders), Doritos, Lay’s, Uncle Chipps, Bikano, Crax, Hide & Seek, “protein” puffs, chips & bars'},
+    {t:'Fizz & sauces', d:'Nimbooz (4 orders), Limca, ketchup, Veeba spread, Lava & Diablo sauce'},
+    {t:'Takeaway Chinese & pizza', d:'Chilli paneer, chilli chicken, hakka noodles, chopsuey, honey chilli potato, spring rolls, Pino’z pizza, mac & cheese'},
+    {t:'Processed meat & cheese', d:'Chicken salami, chicken breakfast sausages, cheese slices'}
+  ];
+  const EAT = [
+    {t:'Tandoori fish tikka', d:'With mint chutney (Barbeque Nation, Fishy Fish Fishy)'},
+    {t:'Steamed chicken momos', d:'Steamed, whole wheat if they have it, no mayo (Dumpling Hood, Wow! Momo)'},
+    {t:'Paneer thali', d:'Shahi paneer, missi roti, black dal (Shree Gurunanak)'},
+    {t:'Grilled chicken & rice', d:'The bowl, not the burger (Burgrill)'},
+    {t:'Paneer, dahi, bran bread, lauki', d:'From your grocery runs: cook these at home'}
+  ];
+  const TICK_NEVER = ['Taco Bell chalupa','Nuggets & Lava dip','Cornitos nachos','KFC popcorn','Popeyes burger','Whopper','Hazelnut latte','Thickshakes','Baskin Robbins','Theobroma cake','Nimbooz','Protein puffs','Chilli paneer','Pino’z pizza','Chicken salami'];
+  const TICK_EAT = ['Tandoori fish tikka','Steamed chicken momos','Paneer thali, missi roti','Grilled chicken & rice','Paneer at home','Dahi','Bran bread','Lauki'];
+
+  // Decoy ordering app: his real restaurants and the exact dishes he ordered (Sep–Nov 2026).
+  // No logos or brand styling; labelled as a decoy. [name, price ₹, approx kcal]
+  const SHOPS = [
+    {id:'taco', name:'Taco Bell', area:'Phase 3, Mohali', cuisine:'Mexican · Tacos · Shakes', eta:'25–30 min', art:'chips', times:9, failed:3, items:[
+      ['Crispy Chalupa Taco (Non Veg)',179,390],['Seasoned Nachos & Salsa',119,330],['4 Nuggets',99,230],['5 Nuggets & Lava Dip',149,440],
+      ['Soft Crispy Chicken Taco',129,320],['Soft Taco Grilled Shell Mexican Paneer',119,310],['Soft Taco Chipotle Chicken',129,300],
+      ['Hazelnut Cold Coffee Thickshake',129,403],['Cookie Crumble Thickshake',149,520],['Mexican Chocolate Thickshake',149,500],
+      ['Mexican Chilli Twists',79,260],['2pcs Churros with Chocolate',119,330],['Lava Sauce',25,90],["Devil's Diablo Sauce (10 pouch combo)",49,60],['Green Salsa Avocado Sauce',30,60]]},
+    {id:'snack', name:'Snack run', area:'10-minute delivery', cuisine:'Chips · Fizz · Ice cream', eta:'10 min', art:'jar', times:16, items:[
+      ['Cornitos Jalapeno Nachos & Salsa Dip',68,400],['Cornitos Peri Peri Nachos & Salsa Dip',68,400],['7UP Nimbooz 350 ml',25,150],
+      ["Lay's Magic Masala",20,290],['Doritos Nacho Cheese',20,230],['Bikano Crunchy Munchy Sweet Chilli',26,480],['Parle Hide & Seek Milano',34,290],
+      ['Cadbury Rich & Fudgy Brownie',40,230],["Mercely's Death By Chocolate Ice Cream",219,450],['Amul Choco Chip Ice Cream Tub (1 L)',230,1600],
+      ['Go Zero Mocha Fudge Brownie',79,140],['Taali Protein Puffs, Smoky Barbeque',51,250],['Epigamia Turbo Chocolate Protein Shake',99,250],
+      ['Limca 2 L',98,860],['Del Monte Tomato Ketchup',99,110]]},
+    {id:'nbc', name:'Nothing Before Coffee', area:'Phase 5, Mohali', cuisine:'Coffee · Burgers', eta:'25–30 min', art:'glass', times:6, items:[
+      ['Hazelnut Latte',161,250],['Batata Vada Pav',99,300],['NBC Aloo Tikki Burger',119,420],['Brownie With Ice Cream',179,550]]},
+    {id:'br', name:'Baskin Robbins', area:'Phase 5, Mohali', cuisine:'Ice cream', eta:'20–25 min', art:'cup', times:4, items:[
+      ['Gold Medal Ribbon Ice Cream (double)',229,380],['Three Cheers Chocolate Ice Cream',119,250],['Banana N Strawberry Ice Cream',119,200],['Cotton Candy Ice Cream (small)',99,180]]},
+    {id:'faasos', name:'Faasos', area:'Phase 5, Mohali', cuisine:'Wraps · Rolls', eta:'25–30 min', art:'bowl', times:3, items:[
+      ['Chicken Extravaganza Wrap',199,550],['Hot Garlic Crispy Chicken Wrap',189,560]]},
+    {id:'subway', name:'Subway', area:'Phase 3, Mohali', cuisine:'Sandwiches · Cookies', eta:'25–30 min', art:'burger', times:2, items:[
+      ['Double Dark Chunk Chocolate Cookie',69,220],['Roasted Chicken Strip Sandwich (6 in)',259,420],['Paneer Tikka Sandwich (6 in)',239,450]]},
+    {id:'shake', name:'Milkshake And Co.', area:'Phase 3, Mohali', cuisine:'Shakes', eta:'20–25 min', art:'cup', times:2, items:[
+      ['Dark Lord Shake',229,700],['Dark Invader Shake',229,700]]},
+    {id:'yumtum', name:'YumTum China', area:'Phase 5, Mohali', cuisine:'Chinese', eta:'30–35 min', art:'bowl', times:2, items:[
+      ['Chilly Paneer Combo',279,800],['Veg Hakka Noodles',149,550],['Veg American Chopsuey',179,650]]},
+    {id:'cinnabon', name:'Cinnabon', area:'South Mohali', cuisine:'Desserts · Coffee', eta:'25–30 min', art:'cup', times:2, items:[
+      ['Apple Crumble Minibon',149,350],['Latte',148,190]]},
+    {id:'popeyes', name:'Popeyes', area:'Phase 3, Mohali', cuisine:'Fried chicken · Burgers', eta:'25–30 min', art:'drum', times:1, failed:1, items:[
+      ['American Mayo Burst Chicken Burger',179,550],['Bold Chicken Sandwich Burger',249,650],['Boneless Sweet Chilli Chicken Wings',179,420]]},
+    {id:'kfc', name:'KFC', area:'Sector 35, Chandigarh', cuisine:'Fried chicken', eta:'30–35 min', art:'drum', times:1, items:[
+      ['Chicken Popcorn Regular',129,300],['Jumbo Zinger Meal',349,950],['Pepsi',60,150]]},
+    {id:'bk', name:'Burger King', area:'Phase 3, Mohali', cuisine:'Burgers · Shakes', eta:'25–30 min', art:'burger', times:1, items:[
+      ['Original Whopper Chicken (XL bun)',229,700],['Chocolate Thick Shake',119,500]]},
+    {id:'mcd', name:"McDonald's", area:'Sector 35, Chandigarh', cuisine:'Burgers', eta:'30–35 min', art:'burger', times:1, items:[
+      ['McAloo Tikki',69,340],['McChicken',139,420]]},
+    {id:'theo', name:'Theobroma', area:'Phase 3, Mohali', cuisine:'Cakes · Desserts', eta:'30–35 min', art:'cup', times:1, failed:1, items:[
+      ['Eggless Rich Chocolate Cake (550g)',648,2200]]},
+    {id:'fish', name:"Fish 'N' Chips", area:'Sector 67, Mohali', cuisine:'Fried fish · Chicken', eta:'30–35 min', art:'drum', times:1, failed:1, items:[
+      ['Fish N Chips Crumbed (10 strips, 2 dips)',499,950],['Chicken Popcorn',199,400]]},
+    {id:'dh', name:'Dumpling Hood', area:'Sector 35, Chandigarh', cuisine:'Asian', eta:'30–35 min', art:'bowl', times:1, items:[
+      ['Honey Chilli Potato',199,600],['Spring Roll (2 pcs)',149,350]]},
+    {id:'pinoz', name:"Pino'z Pizza", area:'Sector 44', cuisine:'Pizza', eta:'30–35 min', art:'chips', times:1, items:[
+      ['Chicken Seekh & Chicken Salami Pizza',299,900],['Jalapeno Dip',30,90]]},
+    {id:'wok', name:'Wok N Tok', area:'Phase 5, Mohali', cuisine:'Chinese', eta:'30–35 min', art:'bowl', times:1, items:[
+      ['Chilli Chicken Meal',178,750]]},
+    {id:'xero', name:'Xero Degrees', area:'North Mohali', cuisine:'Fried chicken · Fries', eta:'25–30 min', art:'drum', times:1, items:[
+      ['Chicken Strips',299,600]]}
+  ];
+  const PAST = [
+    {shop:'taco', items:['5 Nuggets & Lava Dip','Hazelnut Cold Coffee Thickshake'], total:257, when:'24 Nov, 8:39 PM'},
+    {shop:'snack', items:["Mercely's Death By Chocolate Ice Cream",'Cornitos Jalapeno Nachos & Salsa Dip','7UP Nimbooz 350 ml','Epigamia Turbo Chocolate Protein Shake','Bikano Crunchy Munchy Sweet Chilli','Parle Hide & Seek Milano'], total:506, when:'23 Nov, 8:49 PM'},
+    {shop:'subway', items:['Double Dark Chunk Chocolate Cookie','Roasted Chicken Strip Sandwich (6 in)'], total:332, when:'22 Nov, 4:33 PM'},
+    {shop:'bk', items:['Original Whopper Chicken (XL bun)','Chocolate Thick Shake'], total:348, when:'21 Nov, 2:58 PM'},
+    {shop:'taco', items:['Seasoned Nachos & Salsa','4 Nuggets','4 Nuggets','Lava Sauce'], total:363, when:'18 Nov, 11:28 PM', note:'Your payment failed at 11:26. You ordered again 2 minutes later.'},
+    {shop:'popeyes', items:['American Mayo Burst Chicken Burger'], total:195, when:'16 Nov, 11:54 PM', note:'16 minutes after a failed Popeyes payment.'},
+    {shop:'theo', items:['Eggless Rich Chocolate Cake (550g)'], total:648, when:'15 Nov, 9:26 PM', note:'Ordered again 1 minute after a failed payment.'},
+    {shop:'fish', items:['Fish N Chips Crumbed (10 strips, 2 dips)','Chicken Popcorn'], total:695, when:'4 Nov, 11:08 PM', note:'Ordered again 1 minute after a failed payment.'},
+    {shop:'taco', items:['Soft Crispy Chicken Taco','Soft Taco Grilled Shell Mexican Paneer','Cookie Crumble Thickshake','5 Nuggets & Lava Dip'], total:513, when:'3 Nov, 10:52 PM', note:'Ordered again 3 minutes after a failed payment.'},
+    {shop:'br', items:['Banana N Strawberry Ice Cream','Gold Medal Ribbon Ice Cream (double)'], total:493, when:'2 Nov, 8:10 PM'}
+  ];
+
   const TRIGGERS = ['Late night','Bored','Stressed','After a test','With friends','Actually hungry','Other'];
 
-  return {RATE, FALLBACK_START, TRACK0, HISTORY, MILES, ORGANS, DECKS, REELS, FLIPS, KITCHEN, TRIGGERS, HARD};
+  return {RATE, FALLBACK_START, TRACK0, HISTORY, MILES, ORGANS, DECKS, REELS, FLIPS, KITCHEN, TRIGGERS, HARD, NEVER, EAT, TICK_NEVER, TICK_EAT, SHOPS, PAST};
 })();
