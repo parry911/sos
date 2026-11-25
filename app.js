@@ -73,11 +73,46 @@ $('#vidFile').addEventListener('change', async e => {
 /* ---------- small UI helpers ---------- */
 let toastT = 0;
 function toast(t) { let el = $('#toastEl'); if (!el) { el = document.createElement('div'); el.id = 'toastEl'; el.className = 'toast'; document.body.appendChild(el); } el.textContent = t; el.classList.remove('hide'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.add('hide'), 3400); }
+/* swipe down to close: sheets, stories, SOS, decoy app, celebrations.
+   Starts only when the finger moves down and nothing under it is scrolled, so normal scrolling still works. */
+function swipeDown(root, o) {
+  let y0 = 0, x0 = 0, t0 = 0, dy = 0, armed = false, drag = false, el = null;
+  const blocked = t => { for (let n = t; n && n !== document.body; n = n.parentElement) { if (n.scrollTop > 0) return true; if (n === root) break; } return false; };
+  root.addEventListener('touchstart', e => {
+    armed = false; if (e.touches.length !== 1 || (o.exclude && e.target.closest(o.exclude)) || blocked(e.target)) return;
+    armed = true; drag = false; dy = 0; y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; t0 = performance.now(); el = o.target ? o.target() : root;
+  }, {passive:true});
+  root.addEventListener('touchmove', e => {
+    if (!armed) return;
+    const y = e.touches[0].clientY, x = e.touches[0].clientX; dy = y - y0;
+    if (!drag) {
+      if (dy < -2 || Math.abs(x - x0) > Math.abs(dy) + 4) { armed = false; return; }
+      if (e.cancelable) e.preventDefault();
+      if (dy < 6) return;
+      drag = true; el.style.transition = 'none'; o.start && o.start();
+    }
+    if (e.cancelable) e.preventDefault();
+    const d = Math.max(0, dy - 6); el.style.transform = `translateY(${d}px)`; o.progress && o.progress(Math.min(1, d / (el.offsetHeight || 600)));
+  }, {passive:false});
+  const end = () => {
+    if (!armed) return; armed = false; if (!drag) return; drag = false; root.dataset.swiped = Date.now();
+    const v = dy / Math.max(1, performance.now() - t0), h = el.offsetHeight || 600;
+    el.style.transition = 'transform .24s cubic-bezier(.2,.8,.3,1)';
+    if (dy > Math.min(150, h * 0.22) || v > 0.55) {
+      el.style.transform = `translateY(${h + 40}px)`; o.progress && o.progress(1);
+      setTimeout(() => { el.style.transition = ''; el.style.transform = ''; o.close(); }, 230);
+    } else { el.style.transform = ''; o.progress && o.progress(0); setTimeout(() => { el.style.transition = ''; }, 250); o.cancel && o.cancel(); }
+  };
+  root.addEventListener('touchend', end); root.addEventListener('touchcancel', end);
+}
+const justSwiped = el => Date.now() - (+el.dataset.swiped || 0) < 400;
 function sheet(html, onMount) {
   closeSheet();
   const l = $('#layer');
   l.innerHTML = '<div class="scrim" id="scrim"></div><section class="sheet" role="dialog" aria-modal="true"><div class="grab"></div><div class="wrap">' + html + '</div></section>';
   $('#scrim').onclick = closeSheet;
+  const sh = l.querySelector('.sheet'), sc = $('#scrim');
+  swipeDown(sh, {exclude: 'input,textarea,select', progress: p => { sc.style.opacity = 1 - p * 0.9; }, close: closeSheet});
   if (onMount) onMount(l);
 }
 function closeSheet() { $('#layer').innerHTML = ''; }
@@ -257,8 +292,9 @@ function prevFrame() { if (SV.fi > 0) SV.fi--; else if (SV.di > 0) { SV.di--; SV
 function pauseStory() { if (SV.paused) return; SV.paused = true; SV.el += performance.now() - SV.t0; stv.pause(); FX.suspend(true); }
 function resumeStory() { if (!SV.paused) return; SV.t0 = performance.now(); SV.paused = false; FX.suspend(false); const d = SV.decks[SV.di]; if (d && d.video) stv.play().catch(() => {}); }
 $('#story').addEventListener('pointerdown', e => { if (e.target.closest('#stClose,.sndbtn,.quiz')) return; SV.holding = false; SV.hold = setTimeout(() => { SV.holding = true; pauseStory(); }, 220); });
+swipeDown($('#story'), {exclude: '.quiz', start: () => { clearTimeout(SV.hold); SV.holding = true; pauseStory(); }, cancel: () => { SV.holding = false; resumeStory(); }, close: () => { SV.holding = false; closeStories(); }});
 $('#story').addEventListener('pointerup', e => {
-  if (e.target.closest('#stClose,.sndbtn,.quiz')) return;
+  if (e.target.closest('#stClose,.sndbtn,.quiz') || justSwiped($('#story'))) return;
   clearTimeout(SV.hold);
   if (SV.holding) { resumeStory(); return; }
   if (e.clientX < window.innerWidth*0.3) prevFrame(); else nextFrame();
@@ -510,6 +546,7 @@ $('#still').onclick = () => { clearInterval(waveT); const k = D.KITCHEN.find(x =
 $('#realFirst').onclick = () => finish('real');
 $('#ordered').onclick = () => { logUrge('ate'); closeSOS(); slipSheet(); };
 $('#sClose').onclick = closeSOS;
+swipeDown($('#sos'), {exclude: '.minifeed,.rate,.scratch,input', close: closeSOS});
 $('#sosTab').onclick = openSOS;
 function logUrge(outcome) { S.urges.unshift({at:new Date().toISOString(), want:sos.want, hungry:sos.hungry, ratings:sos.ratings || [], outcome}); S.urges = S.urges.slice(0, 1000); save(); queueSync(dkey(new Date())); }
 function finish(outcome) {
@@ -828,6 +865,7 @@ function foOpen() {
   if (S.decoy) { Date.now() - new Date(S.decoy.at) >= DECOY_MS ? foEnd() : foTrack(); } else foHome();
 }
 function foClose() { clearInterval(fo.timer); $('#fo').classList.add('hide'); renderEatbar(); }
+swipeDown($('#fo'), {exclude: '.fo-sl,.fo-rate,input', close: foClose});
 function foCartBar() {
   const n = cartCount(); if (!n) return '';
   return `<button class="fo-cb" id="foCartBtn"><span>${n} item${n > 1 ? 's' : ''} added<small>${esc(SHOP[fo.cart.shop].name)}</small></span><span>${rupees(bill().items)} · View cart ›</span></button>`;
@@ -975,6 +1013,7 @@ function celebrate(tag, title, body) {
   confT = requestAnimationFrame(f);
 }
 $('#cOk').onclick = () => { $('#cele').classList.add('hide'); renderAll(); };
+swipeDown($('#cele'), {close: () => { $('#cele').classList.add('hide'); renderAll(); }});
 function checkMilestones() {
   const r = reachedCount();
   if (r - 1 > S.celebrated) {

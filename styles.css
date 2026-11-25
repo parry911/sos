@@ -744,3 +744,8 @@ details.settings[open]>summary::after{content:"Close"}
 .minifeed .tl li{font-size:15px;padding:5px 0}
 @media(prefers-reduced-motion:reduce){.scene,.flash,.dotg i,.tl li{animation:none;opacity:1}.w{animation:none;opacity:1;transform:none;filter:none}.vbar,.mtrack i{transition:none}}
 .tg .nw{color:inherit}
+.sheet{animation:sheetUp .3s cubic-bezier(.2,.9,.3,1);will-change:transform}
+@keyframes sheetUp{from{transform:translateY(100%)}}
+.scrim{animation:fadeIn .25s ease;transition:opacity .2s}
+@keyframes fadeIn{from{opacity:0}}
+.sheet .grab{width:44px;height:5px;margin-bottom:12px}
