@@ -202,7 +202,16 @@ window.SOS_DATA = (() => {
     {t:'Paneer, dahi, bran bread, lauki', d:'From your grocery runs: cook these at home'}
   ];
   const TICK_NEVER = ['Taco Bell chalupa','Nuggets & Lava dip','Cornitos nachos','KFC popcorn','Popeyes burger','Whopper','Hazelnut latte','Thickshakes','Baskin Robbins','Theobroma cake','Nimbooz','Protein puffs','Chilli paneer','Pino’z pizza','Chicken salami'];
-  const TICK_EAT = ['Tandoori fish tikka','Steamed chicken momos','Paneer thali, missi roti','Grilled chicken & rice','Paneer at home','Dahi','Bran bread','Lauki'];
+  const TICK_EAT = ['Keema burger at home','Makki nachos & salsa','Air-fryer chicken bites','Chocolate whey soft-serve','Protein cold coffee','Ghee makhana','Shikanji soda','Tandoori fish tikka','Paneer bhurji & roti','Rajma chawal','Egg bhurji','Steamed chicken momos','Palak paneer','Dahi with banana','Almonds & walnuts'];
+  const EVERYDAY = [
+    ['Protein', 'Eggs (whole, whites, omelette or bhurji) · NAKPRO whey · paneer bhurji, matar or palak paneer · soya chunks · chicken curry or dry chicken · fish tikka or fish gravy · mutton gravy'],
+    ['Dal & chana', 'Home dal · black dal · rajma · white chana · kala chana · kadhi · chana salad'],
+    ['Roti & rice', 'Whole-wheat roti · missi roti · bran bread · rice'],
+    ['Sabzi & salad', 'Saag · any home sabzi · cucumber, onion & beetroot salad'],
+    ['Dairy & drinks', 'Milk (malai removed) · homemade dahi · chaas · black coffee · amla-lemon water · ajwain water'],
+    ['Fruit', 'Banana · apple · pear · papaya · mango · avocado · persimmon'],
+    ['Nuts', 'Almonds · walnuts · raisins · roasted chana']
+  ];
 
   // Decoy ordering app: his real restaurants and the exact dishes he ordered (Sep–Nov 2026).
   // No logos or brand styling; labelled as a decoy. [name, price ₹, approx kcal]
@@ -268,5 +277,5 @@ window.SOS_DATA = (() => {
 
   const TRIGGERS = ['Late night','Bored','Stressed','After a test','With friends','Actually hungry','Other'];
 
-  return {RATE, FALLBACK_START, TRACK0, HISTORY, MILES, ORGANS, DECKS, REELS, FLIPS, KITCHEN, TRIGGERS, HARD, NEVER, EAT, TICK_NEVER, TICK_EAT, SHOPS, PAST};
+  return {RATE, FALLBACK_START, TRACK0, HISTORY, MILES, ORGANS, DECKS, REELS, FLIPS, KITCHEN, TRIGGERS, HARD, NEVER, EAT, TICK_NEVER, TICK_EAT, EVERYDAY, SHOPS, PAST};
 })();

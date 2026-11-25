@@ -165,11 +165,11 @@
 
 <!-- TAB BAR -->
 <div class="eatbar" id="eatbar">
-  <button class="eb-lists" id="eatLists" aria-label="Never and eat lists from your order history">
-    <span class="eb-row"><i class="eb-x">NEVER</i><span id="ebNever">Taco Bell chalupa</span></span>
-    <span class="eb-row"><i class="eb-ok">EAT</i><span id="ebEat">Tandoori fish tikka</span></span>
-  </button>
-  <button class="eb-order" id="eatOrder" aria-label="Open the decoy ordering app"><b id="ebOrdB">Order</b><small id="ebOrdS">decoy</small></button>
+  <div class="eb-lists">
+    <button class="eb-row" id="ebN" aria-label="Foods from your orders not to order again"><i class="eb-x" aria-hidden="true">✕</i><span class="nv-t" id="ebNever">Taco Bell chalupa</span></button>
+    <button class="eb-row" id="ebE" aria-label="Foods you can eat instead"><i class="eb-ok" aria-hidden="true">✓</i><span id="ebEat">Keema burger at home</span></button>
+  </div>
+  <button class="eb-order" id="eatOrder" aria-label="Order"><b id="ebOrdB">Order</b><small id="ebOrdS" class="hide"></small></button>
 </div>
 <nav class="tabs" id="tabs">
   <button class="tab on" data-tab="body"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><path d="M12 8v7M7 10h10M9 22l3-7 3 7"/></svg>Body</button>

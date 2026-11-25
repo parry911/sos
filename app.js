@@ -697,17 +697,33 @@ setInterval(() => {
   if (document.hidden || !$('#body').classList.contains('on') || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   ebI++; ebSet('#ebNever', D.TICK_NEVER, ebI); setTimeout(() => ebSet('#ebEat', D.TICK_EAT, ebI), 600);
 }, 3400);
-function listsSheet(eatFirst) {
-  const never = `<div class="q" style="font-size:28px">Never again</div><p>Straight from your Swiggy, Zomato, Blinkit and Instamart orders, Sep–Nov 2026.</p><div class="nl">${D.NEVER.map(x => `<div class="nv"><b>${esc(x.t)}${x.n ? `<i>${esc(x.n)}</i>` : ''}</b><span>${esc(x.d)}</span></div>`).join('')}</div>`;
-  const eat = `<div class="q" style="font-size:28px;margin-top:${eatFirst ? 8 : 24}px" id="eatH">Safe to eat</div><p>The few things in that same history that were actually fine.</p><div class="nl">${D.EAT.map(x => `<div class="ev"><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div>`).join('')}</div>`;
-  sheet((eatFirst ? eat + '<div style="height:8px"></div>' + never : never + eat) + '<button class="btn dim full" id="shClose">Close</button>', () => { $('#shClose').onclick = closeSheet; });
+const KMAP = [['tacos', /taco|nacho|chalupa|twists|doritos|cornitos/i], ['burger', /burger|whopper|mcchicken|mcaloo|sandwich|wrap|pizza|vada pav/i], ['chicken', /nugget|popcorn|wings|strips|zinger|fish|chicken/i], ['sweet', /ice cream|cake|brownie|cookie|minibon|churros|milano|go zero/i], ['latte', /latte|shake/i], ['soda', /soda|nimbooz|limca|pepsi/i], ['chips', /chips|lay's|puffs|namkeen/i], ['sauce', /sauce|ketchup|dip/i]];
+function focusFor(names) { const out = []; names.forEach(n => { const m = KMAP.find(([, r]) => r.test(n)); if (m && !out.includes(m[0])) out.push(m[0]); }); return out; }
+function eatHTML(focus) {
+  focus = focus || [];
+  const ks = [...D.KITCHEN].sort((a, b) => (focus.includes(a.id) ? focus.indexOf(a.id) : 99) - (focus.includes(b.id) ? focus.indexOf(b.id) : 99));
+  return `<div class="el"><h5>Home versions of what you crave</h5><div class="el-g">${ks.map(k => `<button class="el-k${focus.includes(k.id) ? ' top' : ''}" data-rk="${k.id}"><span class="el-ic" style="background:${k.color}">${ART[k.art]().replace('<svg', '<svg width="28" height="28"')}</span><span><b>${esc(k.name)}</b><small>For ${esc(k.craving.toLowerCase())} · ${k.mins} min</small></span></button>`).join('')}</div>
+    <h5>From your orders, these were fine</h5>${D.EAT.map(x => `<div class="el-r"><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div>`).join('')}
+    <h5>Your everyday foods</h5>${D.EVERYDAY.map(([t, d]) => `<div class="el-r"><b>${esc(t)}</b><span>${esc(d)}</span></div>`).join('')}</div>`;
 }
-$('#eatLists').onclick = () => listsSheet(false);
+function neverSheet() {
+  sheet(`<div class="q" style="font-size:28px">Don’t order these again</div><p>Straight from your Swiggy, Zomato, Blinkit and Instamart orders, Sep–Nov 2026.</p><div class="nl">${D.NEVER.map(x => `<div class="nv"><b>${esc(x.t)}${x.n ? `<i>${esc(x.n)}</i>` : ''}</b><span>${esc(x.d)}</span></div>`).join('')}</div><button class="btn mint full" id="toEat">What can I eat instead?</button><button class="btn dim full" id="shClose">Close</button>`, () => { $('#shClose').onclick = closeSheet; $('#toEat').onclick = () => eatSheet(); });
+}
+function eatSheet(recipe, focus) {
+  sheet(`<div class="q" style="font-size:28px">Eat these instead</div><p>Tap a home version for the recipe.</p><div id="kOut"></div>${eatHTML(focus)}<button class="btn dim full" id="shClose">Close</button>`, l => {
+    $('#shClose').onclick = closeSheet;
+    const show = id => { $('#kOut').innerHTML = dishHTML(D.KITCHEN.find(k => k.id === id), true); $('#kOut').scrollIntoView({behavior:'smooth', block:'start'}); };
+    l.querySelectorAll('[data-rk]').forEach(b => b.onclick = () => show(b.dataset.rk));
+    if (recipe) show(recipe);
+  });
+}
+$('#ebN').onclick = neverSheet;
+$('#ebE').onclick = () => eatSheet();
 $('#eatOrder').onclick = () => foOpen();
 function renderEatbar() {
   const live = !!S.decoy;
   $('#eatOrder').classList.toggle('live', live);
-  $('#ebOrdB').textContent = live ? 'Track' : 'Order'; $('#ebOrdS').textContent = live ? 'on the way' : 'decoy';
+  $('#ebOrdB').textContent = live ? 'Track' : 'Order'; $('#ebOrdS').textContent = 'on the way'; $('#ebOrdS').classList.toggle('hide', !live);
 }
 
 /* ---------- decoy ordering app ---------- */
@@ -877,8 +893,9 @@ function foEnd(rec) {
     `<div class="fo-end"><span class="fo-pill">DECOY</span><h2>${cancelled ? 'Cancelled. Nothing was ever coming.' : 'Your order isn’t coming. It never was.'}</h2>
      <p>${cancelled ? 'You chose, you browsed, you paid in your head, and then you walked away. That’s the whole craving, handled.' : 'The wanting rose, peaked and passed while you watched a rider who doesn’t exist. That was the wave, ridden out.'}</p>
      <div class="fo-sts"><div class="fo-st"><b>${rupees(rec.total)}</b><span>stays with you</span></div><div class="fo-st"><b>${rec.kcal.toLocaleString('en-IN')}</b><span>kcal you didn’t eat</span></div>${r.length > 1 ? `<div class="fo-st" style="grid-column:1/-1"><b>${r[0]} → ${r[r.length - 1]}</b><span>your craving, start to finish</span></div>` : ''}</div>
-     <button class="fo-btn dark" id="foReal">Show me what I can eat</button><button class="fo-btn lite" data-fx>Done</button></div>`, '');
-  $('#foReal').onclick = () => { foClose(); listsSheet(true); };
+     <h3>Eat this instead</h3><p style="font-size:14px;margin:0 0 6px">The home version of what you just ordered is first.</p>${eatHTML(focusFor(rec.items.map(x => x[0])))}
+     <button class="fo-btn dark" data-fx style="margin-top:18px">Done</button></div>`, '');
+  $$('#fo [data-rk]').forEach(b => b.onclick = () => { foClose(); eatSheet(b.dataset.rk, focusFor(rec.items.map(x => x[0]))); });
   renderAll();
 }
 if (new URLSearchParams(location.search).get('go') === 'order') setTimeout(foOpen, 300);
