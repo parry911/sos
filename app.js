@@ -20,7 +20,7 @@ const S = (() => {
   try { s = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
   return Object.assign({start:D.FALLBACK_START, best:0, installed:new Date().toISOString(), slips:[], urges:[], pinned:[], seen:{}, celebrated:-1, comebackDone:null, gateSkipped:false, poster:null}, s || {});
 })();
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('Could not save on this phone.'); } };
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('Could not save on this phone.'); } if (window.__ghDirty) window.__ghDirty(); };
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 
 const streakMs = () => Math.max(0, Date.now() - new Date(S.start).getTime());
@@ -737,7 +737,7 @@ function snapshot(day) {
     lines.push(name + ': ' + its.map(it => { const f = FOOD[it.id]; return f ? f.name + ' (' + amountLabel(f, it.g) + ')' : ''; }).filter(Boolean).join(', '));
   });
   const t = totals(day);
-  if (dayItems(day).length) lines.push(`Total: ${Math.round(t.kcal)} kcal · ${Math.round(t.p)} g protein · ${Math.round(t.c)} g carbs · ${Math.round(t.f)} g fat · ${Math.round(t.fib)} g fibre · ${Math.round(t.na)} mg sodium · ${fmt1(t.zn)} mg zinc`);
+  if (dayItems(day).length) lines.push(`Total: ${Math.round(t.kcal)} kcal · ${Math.round(t.p)} g protein · ${Math.round(t.c)} g carbs · ${Math.round(t.f)} g fat · ${Math.round(t.fib)} g fibre · ${Math.round(t.na)} mg sodium · ${fmt1(t.zn)} mg zinc · ${Math.round(t.asug)} g added sugar (${Math.round(t.sug)} g all sugar)`);
   else lines.push('No food logged in SOS.');
   const w = S.weights.find(x => x.d === day); if (w) lines.push('Weight: ' + w.kg + ' kg');
   const urges = S.urges.filter(u => dkey(u.at) === day), won = urges.filter(u => u.outcome === 'won' || u.outcome === 'real').length;
@@ -1063,7 +1063,7 @@ let fDay = 0; // days back from today
 const fKey = () => { const n = new Date(); return dkey(new Date(n.getFullYear(), n.getMonth(), n.getDate() - fDay)); };
 const dayItems = k => (S.food[k] || []);
 const fmt1 = x => (Math.round(x*10)/10).toString();
-const NUTS = ['kcal','p','c','f','fib','na','k','ca','fe','vc','zn'];
+const NUTS = ['kcal','p','c','f','fib','na','k','ca','fe','vc','zn','sug','asug','mg','b12','vd','fol','va'];
 const nut = (f, g, k) => (f[k] || 0) * g / 100;
 const PLURAL = {egg:'eggs', white:'whites', slice:'slices', bowl:'bowls', plate:'plates', glass:'glasses', cup:'cups', scoop:'scoops', 'level scoop':'level scoops', omelette:'omelettes', half:'halves', handful:'handfuls', bottle:'bottles', bar:'bars', wafer:'wafers', pack:'packs', piece:'pieces', serving:'servings', 'regular bowl':'regular bowls'};
 function unitName(label, n) {
@@ -1106,8 +1106,8 @@ function renderTCard(k, t, T) {
     ['Fish', /fish/i.test(names)],
     [T ? `Protein ${Math.round(t.p)} / ${T.p} g` : `Protein ${Math.round(t.p)} g`, T ? t.p >= T.p : false]
   ];
-  const lowFat = t.kcal > 800 && t.f * 9 / t.kcal < 0.2;
-  $('#tCard').innerHTML = `<div class="tcard"><div class="tc-h"><b>Testosterone foods today</b><span>${checks.filter(c => c[1]).length} of ${checks.length}</span></div><div class="tc-chips">${checks.map(([n, ok]) => `<span class="${ok ? 'ok' : ''}">${ok ? '✓ ' : ''}${esc(n)}</span>`).join('')}</div>${lowFat ? '<p class="tc-w">Fat is under 20% of today’s calories. Low-fat eating cuts testosterone 10–15%: add eggs, nuts or a little ghee.</p>' : ''}</div>`;
+  const lowFat = t.kcal > 800 && t.f * 9 / t.kcal < 0.2, sugHi = t.asug > microRef(F.SUGAR, T);
+  $('#tCard').innerHTML = `<div class="tcard"><div class="tc-h"><b>Testosterone foods today</b><span>${checks.filter(c => c[1]).length} of ${checks.length}</span></div><div class="tc-chips">${checks.map(([n, ok]) => `<span class="${ok ? 'ok' : ''}">${ok ? '✓ ' : ''}${esc(n)}</span>`).join('')}</div>${lowFat ? '<p class="tc-w">Fat is under 20% of today’s calories. Low-fat eating cuts testosterone 10–15%: add eggs, nuts or a little ghee.</p>' : ''}${sugHi ? '<p class="tc-w">Added sugar is over today’s limit. In a 2013 study, a 75 g sugar drink cut men’s testosterone by about a quarter within 2 hours (Caronia, Clinical Endocrinology).</p>' : ''}</div>`;
 }
 const isPlateMeal = id => id === 'lunch' || id === 'dinner';
 function renderFood() {
@@ -1120,7 +1120,9 @@ function renderFood() {
   else { $('#kBig').textContent = Math.round(t.kcal).toLocaleString('en-IN'); $('#kLab').textContent = 'kcal eaten'; }
   const fibRef = microRef(F.MICROS[0], T);
   const M = [['Protein', t.p, T && T.p, '#7ef0b5'], ['Carbs', t.c, T && T.c, '#ffd166'], ['Fat', t.f, T && T.f, '#ff9b85'], ['Fibre', t.fib, fibRef, '#9fd8bd']];
-  $('#macros').innerHTML = M.map(([n, v, tg, col]) => `<div class="mb"><div><span>${n}</span><b>${Math.round(v)}${tg ? ' / ' + tg : ''} g</b></div>${bar(tg ? v/tg : 0, col)}</div>`).join('');
+  const sRef = microRef(F.SUGAR, T), sOver = t.asug > sRef;
+  $('#macros').innerHTML = M.map(([n, v, tg, col]) => `<div class="mb"><div><span>${n}</span><b>${Math.round(v)}${tg ? ' / ' + tg : ''} g</b></div>${bar(tg ? v/tg : 0, col)}</div>`).join('')
+    + `<div class="mb sugar"><div><span>Added sugar</span><b style="color:${sOver ? 'var(--coral)' : 'inherit'}">${fmt1(t.asug)} / ${sRef} g</b></div>${bar(t.asug / sRef, sOver ? '#ff6b57' : '#ffd166')}<small>All sugar ${Math.round(t.sug)} g, incl. fruit and milk</small></div>`;
   renderTCard(k, t, T);
   $('#fNote').innerHTML = T ? '' : `<div class="note">Add your age in <b>Targets</b> below and I’ll work out your calories, protein, carbs and fat from your weight (${curWeight()} kg) and height (${S.prof.h} cm).</div>`;
   $('#meals').innerHTML = F.MEALS.map(([id, name]) => {
@@ -1137,7 +1139,7 @@ function renderFood() {
       ${items.map(({it, i}) => { const f = FOOD[it.id]; return `<div class="fi"><button class="nm" data-edit="${i}"><b>${esc(f.name)}${f.pk ? '<span class="pk">Packaged</span>' : ''}</b><span>${esc(amountLabel(f, it.g))}</span></button><div class="kc">${Math.round(nut(f, it.g, 'kcal'))} kcal<small>${fmt1(nut(f, it.g, 'p'))} g protein</small></div><button class="rm" data-rm="${i}" aria-label="Remove ${esc(f.name)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>`; }).join('')}
       ${empty}</div>`;
   }).join('');
-  $('#micros').innerHTML = F.MICROS.map(m => { const ref = microRef(m, T), v = t[m.k], p = v / ref, bad = m.limit && v > ref; return `<div class="mi"><span>${m.name}${m.t ? '<i class="tplus">T</i>' : ''}</span>${bar(p, m.limit ? (bad ? '#ff6b57' : '#ffd166') : '#7ef0b5')}<b style="color:${bad ? 'var(--coral)' : 'inherit'}">${(v < 10 && m.unit === 'mg' ? fmt1(v) : Math.round(v).toLocaleString('en-IN'))} / ${ref.toLocaleString('en-IN')} ${m.unit}</b></div>`; }).join('');
+  $('#micros').innerHTML = F.MICROS.map(m => { const ref = microRef(m, T), v = t[m.k] || 0, p = v / ref, bad = m.limit && v > ref; return `<div class="mi"><span>${m.name}${m.t ? '<i class="tplus">T</i>' : ''}${m.note ? `<small>${esc(m.note)}</small>` : ''}</span>${bar(p, m.limit ? (bad ? '#ff6b57' : '#ffd166') : '#7ef0b5')}<b style="color:${bad ? 'var(--coral)' : 'inherit'}">${(v < 10 && m.unit !== 'g' ? fmt1(v) : Math.round(v).toLocaleString('en-IN'))} / ${ref.toLocaleString('en-IN')} ${m.unit}</b></div>`; }).join('');
   renderWeight(); renderTargets();
 }
 function addItems(meal, list) {
@@ -1265,7 +1267,7 @@ function customSheet(meal) {
       <label>The numbers below are for<select id="cBasis"><option value="100">100 g (as on most labels)</option><option value="serv">One serving</option></select></label>
       <div id="cServ" class="hide" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><label>Serving name<input id="cSName" maxlength="20" placeholder="chilla"></label><label>Serving weight, g<input id="cSG" type="number" inputmode="decimal" min="1" placeholder="80"></label></div>
     </div>
-    <div class="frm"><label>Calories, kcal<input id="cK" type="number" inputmode="decimal" min="0"></label><label>Protein, g<input id="cP" type="number" inputmode="decimal" min="0"></label><label>Carbs, g<input id="cC" type="number" inputmode="decimal" min="0"></label><label>Fat, g<input id="cF" type="number" inputmode="decimal" min="0"></label><label>Fibre, g (optional)<input id="cFi" type="number" inputmode="decimal" min="0"></label><label>Sodium, mg (optional)<input id="cNa" type="number" inputmode="decimal" min="0"></label></div>
+    <div class="frm"><label>Calories, kcal<input id="cK" type="number" inputmode="decimal" min="0"></label><label>Protein, g<input id="cP" type="number" inputmode="decimal" min="0"></label><label>Carbs, g<input id="cC" type="number" inputmode="decimal" min="0"></label><label>Fat, g<input id="cF" type="number" inputmode="decimal" min="0"></label><label>Fibre, g (optional)<input id="cFi" type="number" inputmode="decimal" min="0"></label><label>Sodium, mg (optional)<input id="cNa" type="number" inputmode="decimal" min="0"></label><label>Total sugars, g (optional)<input id="cSu" type="number" inputmode="decimal" min="0"></label><label>Added sugars, g (optional)<input id="cAs" type="number" inputmode="decimal" min="0"></label></div>
     <div class="two" style="margin-top:16px"><button class="btn dim" id="cBack">Back</button><button class="btn mint" id="cSave">Save and add</button></div>`, () => {
       $('#cBasis').onchange = () => $('#cServ').classList.toggle('hide', $('#cBasis').value !== 'serv');
       $('#cBack').onclick = () => addSheet(meal);
@@ -1278,7 +1280,7 @@ function customSheet(meal) {
         const base = serv ? sg : 100, k = 100 / base;
         const f = {id: 'my-' + Date.now().toString(36), name, cat: 'My foods', mine: true, kind: '', note: 'your own entry', pk: false,
           units: [[serv ? ($('#cSName').value.trim() || 'serving') : '100 g', serv ? sg : 100]],
-          kcal: kcal*k, p: p*k, c: c*k, f: fat*k, fib: num('#cFi')*k, na: num('#cNa')*k, k: 0, ca: 0, fe: 0, vc: 0, zn: 0};
+          kcal: kcal*k, p: p*k, c: c*k, f: fat*k, fib: num('#cFi')*k, na: num('#cNa')*k, k: 0, ca: 0, fe: 0, vc: 0, zn: 0, sug: Math.max(num('#cSu'), num('#cAs'))*k, asug: num('#cAs')*k, mg: 0, b12: 0, vd: 0, fol: 0, va: 0};
         if (!serv) f.units = [['serving (100 g)', 100]];
         S.myFoods.push(f); save(); buildFood();
         addSheet(meal, f.id);
@@ -1412,6 +1414,123 @@ function renderMotto() {
 $('#hard').onclick = () => { hardI = (hardI === null ? 0 : hardI) + 1; renderMotto(); };
 function renderAll() { renderMotto(); renderFoodCard(); if ($('#food').classList.contains('on')) renderFood(); renderStoryRow(); renderComeback(); renderFund(); renderEatbar(); renderBodyMap(); renderWeekCard(); tick(); if ($('#you').classList.contains('on')) renderYou(); if ($('#stories').classList.contains('on')) renderStoryList(); }
 
+
+/* ---------- sync across devices (a secret GitHub gist) ---------- */
+// The token and gist id live only in this device's storage, never in the app's code or backups.
+const GHK = 'sos.gh', GHB = 'sos.ghbase', GH_FILE = 'sos-sync.json', GH_DESC = 'SOS app sync (private)';
+const GH_LOCAL = new Set(['poster', 'avatar', 'sync', 'syncPending', 'syncLast', 'lastBackup', 'gateSkipped', 'sound', 'music']);
+let gh = null; try { gh = JSON.parse(localStorage.getItem(GHK) || 'null'); } catch (e) {}
+const ghSaveCfg = () => { try { gh ? localStorage.setItem(GHK, JSON.stringify(gh)) : localStorage.removeItem(GHK); } catch (e) {} };
+const jsame = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const syncedState = () => { const o = {}; Object.keys(S).forEach(k => { if (!GH_LOCAL.has(k)) o[k] = S[k]; }); return JSON.parse(JSON.stringify(o)); };
+async function ghApi(path, opt) {
+  const r = await fetch('https://api.github.com' + path, Object.assign({cache: 'no-store'}, opt, {headers: Object.assign({'Authorization': 'Bearer ' + gh.token, 'Accept': 'application/vnd.github+json'}, opt && opt.body ? {'Content-Type': 'application/json'} : {})}));
+  if (r.status === 401) throw new Error('auth');
+  if (!r.ok) throw new Error('http ' + r.status);
+  return r.json();
+}
+async function ghFind() {
+  for (let page = 1; page <= 5; page++) {
+    const list = await ghApi('/gists?per_page=100&page=' + page);
+    const g = list.find(x => x.files && x.files[GH_FILE] && x.description === GH_DESC);
+    if (g) return g.id;
+    if (list.length < 100) break;
+  }
+  return null;
+}
+async function ghRead() {
+  const g = await ghApi('/gists/' + gh.gist), f = g.files && g.files[GH_FILE];
+  if (!f) return null;
+  let text = f.content;
+  if (f.truncated) text = await (await fetch(f.raw_url, {cache: 'no-store'})).text();
+  try { return JSON.parse(text); } catch (e) { return null; }
+}
+const ghBody = s => JSON.stringify({files: {[GH_FILE]: {content: JSON.stringify({v: 1, at: new Date().toISOString(), s})}}});
+// Three-way merge: base = what this device last synced. Whichever side changed a value wins;
+// if both changed it, lists are combined and other values keep this device's version.
+function ghMerge(k, b, l, r) {
+  if (jsame(l, r)) return l;
+  if (b !== undefined && jsame(l, b)) return r;
+  if (b !== undefined && jsame(r, b)) return l;
+  if (l === undefined) return r;
+  if (r === undefined) return l;
+  if (Array.isArray(l) && Array.isArray(r)) {
+    const cnt = new Map(), out = [];
+    const add = (arr, side) => { const c = new Map(); arr.forEach(x => { const j = JSON.stringify(x); c.set(j, (c.get(j) || 0) + 1); if ((c.get(j)) > (cnt.get(j) || 0)) { cnt.set(j, c.get(j)); out.push(x); } }); };
+    add(l, 'l'); add(r, 'r');
+    if (k === 'weights') { const by = new Map(); l.concat(r).forEach(w => { if (!by.has(w.d)) by.set(w.d, w); }); return [...by.values()].sort((a, c) => a.d < c.d ? -1 : 1); }
+    if (out.every(x => x && x.at)) out.sort((a, c) => new Date(a.at) - new Date(c.at));
+    return out;
+  }
+  if (l && r && typeof l === 'object' && typeof r === 'object') {
+    const o = {}; new Set(Object.keys(r).concat(Object.keys(l))).forEach(kk => { const v = ghMerge(kk, b && typeof b === 'object' ? b[kk] : undefined, l[kk], r[kk]); if (v !== undefined) o[kk] = v; }); return o;
+  }
+  if (k === 'best') return Math.max(l, r);
+  if (k === 'start') return new Date(l) > new Date(r) ? l : r;
+  if (k === 'installed' || k === 'origin') return new Date(l) < new Date(r) ? l : r;
+  return b === undefined ? r : l;
+}
+const ghFresh = () => !Object.values(S.food || {}).some(a => a.length) && !S.urges.length && !S.slips.length && (S.weights || []).length <= 1;
+let ghBusy = false, ghApplying = false, ghT = 0, ghAgain = false;
+window.__ghDirty = () => { if (!gh || ghApplying) return; clearTimeout(ghT); ghT = setTimeout(ghSync, 3000); };
+async function ghSync() {
+  if (!gh || !gh.gist) return;
+  if (ghBusy) { ghAgain = true; return; }
+  ghBusy = true; ghAgain = false;
+  try {
+    const remote = await ghRead(), local = syncedState();
+    let base; try { base = JSON.parse(localStorage.getItem(GHB) || 'null') || undefined; } catch (e) {}
+    let merged;
+    if (!remote || !remote.s) merged = local;
+    else if (!base && ghFresh()) merged = remote.s;
+    else merged = ghMerge('', base, local, remote.s);
+    if (!jsame(merged, local)) {
+      const before = S.food || {};
+      ghApplying = true;
+      Object.keys(merged).forEach(k => { S[k] = merged[k]; });
+      if (!S.myFoods) S.myFoods = []; if (!S.lastG) S.lastG = {}; if (!S.food) S.food = {};
+      buildFood(); save(); ghApplying = false;
+      Object.keys(S.food).forEach(d => { if (!jsame(before[d], S.food[d])) queueSync(d); });
+      renderAll();
+    }
+    if (!remote || !jsame(merged, remote.s)) await ghApi('/gists/' + gh.gist, {method: 'PATCH', body: ghBody(merged)});
+    try { localStorage.setItem(GHB, JSON.stringify(merged)); } catch (e) {}
+    gh.last = new Date().toISOString(); gh.err = ''; ghSaveCfg();
+  } catch (e) {
+    ghApplying = false;
+    if (gh) { gh.err = e.message === 'auth' ? 'GitHub refused the token. Paste a new one.' : navigator.onLine ? 'Couldn’t reach GitHub. Trying again soon.' : 'Offline. It syncs when you’re back online.'; ghSaveCfg(); }
+  }
+  ghBusy = false; renderGh();
+  if (ghAgain) setTimeout(ghSync, 500);
+}
+function renderGh() {
+  const el = $('#ghStatus'); if (!el) return;
+  el.textContent = gh && gh.gist ? 'On. Your log, streak and settings sync between your iPhone, iPad and Mac.' + (gh.last ? ' Last synced ' + new Date(gh.last).toLocaleString('en-IN', {day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit'}) + '.' : '') + (gh.err ? ' ' + gh.err : '')
+    : 'Off. Everything you log stays on this device until you connect.';
+  $('#ghRow').classList.toggle('hide', !!(gh && gh.gist && !(gh.err || '').startsWith('GitHub refused')));
+  $('#ghOff').classList.toggle('hide', !(gh && gh.gist));
+}
+$('#ghSave').onclick = async () => {
+  const token = $('#ghIn').value.trim();
+  if (!/^(ghp_|github_pat_|gho_)\w+/.test(token)) { toast('That doesn’t look like a GitHub token. It starts with ghp_.'); return; }
+  const old = gh; gh = {token}; $('#ghSave').disabled = true;
+  try {
+    let id = await ghFind();
+    if (!id) { const g = await ghApi('/gists', {method: 'POST', body: JSON.stringify({description: GH_DESC, public: false, files: {[GH_FILE]: {content: JSON.stringify({v: 1, at: new Date().toISOString(), s: syncedState()})}}})}); id = g.id; try { localStorage.setItem(GHB, JSON.stringify(syncedState())); } catch (e) {} }
+    else if (old && old.gist !== id) { try { localStorage.removeItem(GHB); } catch (e) {} }
+    gh.gist = id; ghSaveCfg(); $('#ghIn').value = '';
+    toast('Connected. Syncing now.'); await ghSync();
+  } catch (e) {
+    gh = old; ghSaveCfg();
+    toast(e.message === 'auth' ? 'GitHub refused that token. Check it has the gist box ticked.' : e.message === 'http 404' ? 'The token needs the gist permission ticked.' : 'Couldn’t reach GitHub. Try again online.');
+  }
+  $('#ghSave').disabled = false; renderGh();
+};
+$('#ghOff').onclick = () => { gh = null; ghSaveCfg(); try { localStorage.removeItem(GHB); } catch (e) {} renderGh(); toast('This device stopped syncing. Your data stays here.'); };
+window.addEventListener('online', () => ghSync());
+setInterval(() => { if (!document.hidden) ghSync(); }, 60000);
+renderGh();
+
 /* ---------- start ---------- */
 if (!standalone() && !S.gateSkipped) $('#gate').classList.remove('hide');
 $('#gateSkip').onclick = () => { S.gateSkipped = true; save(); $('#gate').classList.add('hide'); };
@@ -1420,7 +1539,8 @@ renderAll();
 loadVideo();
 loadMusic();
 setInterval(tick, 1000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderAll(); maybeBackup(); flushSync(); } else if ((S.syncPending || []).length) { clearTimeout(syncT); flushSync(); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderAll(); maybeBackup(); flushSync(); ghSync(); } else if ((S.syncPending || []).length) { clearTimeout(syncT); flushSync(); } });
 setTimeout(() => { maybeBackup(); flushSync(); }, 2500);
+ghSync();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 }
