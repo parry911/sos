@@ -134,7 +134,7 @@ const F = [
   ['ritebite','RiteBite Max Protein bar','Packaged',[427,28.6,51.1,21.3,7.1,290,210,140,2.1,0,1.5,5,0,100,0.5,0,50,0],[['bar (70 g)',70]],1,'','label: 20 g protein, 299 kcal; sold as no added sugar, check your pack'],
   ['superyou','SuperYou protein wafer','Packaged',[475,25,51.3,23.5,7.5,300,200,50,1.5,0,1.0,15,10,60,0,0,20,0],[['wafer (40 g)',40]],1,'','label: 10 g protein, 190 kcal; sugar estimated, check your pack'],
   ['taali','Taali protein puffs','Packaged',[415,17,53,15,5,1012,300,50,2.5,0,2.0,3,1,60,0,0,20,0],[['pack (60 g)',60]],1,'','label: 415 kcal per 100 g'],
-  ['sugar','Sugar or brown sugar','Add-ons',[380,0.1,98,0,0,28,133,83,0.7,0,0.03,97,97,9,0,0,1,0],[['tsp',4]],0,'','USDA brown sugar'],
+  ['sugar','Sugar or brown sugar','Add-ons',[380,0.1,98,0,0,28,133,83,0.7,0,0.03,97,97,9,0,0,1,0],[['spoon (7 g)',7]],0,'','USDA brown sugar; your spoon weighs 7 g'],
   ['gur','Jaggery (gur)','Add-ons',[383,0.4,95,0.1,0,30,1050,80,2.6,0,0.2,85,85,70,0,0,0,0],[['piece',10]],0,'','IFCT jaggery; counts as added sugar'],
   ['honey','Honey','Add-ons',[304,0.3,82.4,0,0.2,4,52,6,0.42,0.5,0.22,82.1,82.1,2,0,0,2,0],[['tsp',7]],0,'','USDA; counts as added sugar'],
   ['malai','Malai (milk cream)','Add-ons',[340,2.8,2.7,36,0,27,95,66,0.1,0.6,0.2,2.9,0,7,0.2,0.6,4,411],[['tbsp',15]],0,'','USDA heavy cream'],
@@ -162,7 +162,7 @@ window.SOS_FOODS = (() => {
     {id:'t-breakfast', meal:'breakfast', name:'Usual breakfast', items:[['egg',100],['white',99],['milk',210],['whey',33]]},
     {id:'t-breadomelette', meal:'breakfast', name:'Bread omelette', items:[['egg',100],['white',99],['ghee',5],['bran',54],['milk',210],['whey',33]]},
     {id:'t-snack', meal:'snack', name:'Coffee + banana', items:[['coffee',240],['banana',118]]},
-    {id:'t-malai', meal:'snack', name:'Bread, malai & brown sugar', items:[['bran',54],['malai',30],['sugar',8]]}
+    {id:'t-malai', meal:'snack', name:'Bread, malai & brown sugar', items:[['bran',54],['malai',30],['sugar',7]]}
   ];
   const MEALS = [['morning','Early morning'],['breakfast','Breakfast'],['lunch','Lunch'],['snack','Snack'],['dinner','Dinner']];
   // Daily references for an adult Indian man, ICMR-NIN 2020. Fibre is 40 g per 2,000 kcal. Sodium is the WHO limit (5 g salt).

@@ -1331,11 +1331,12 @@ function nutriSheet(id, back) {
 // Quick sugar for a meal: tea, coffee, dahi, anything sweetened at home.
 function sugarSheet(meal) {
   const mealName = F.MEALS.find(m => m[0] === meal)[1].toLowerCase();
-  const TYPES = [['sugar', 'Sugar', 4], ['gur', 'Gur', 5], ['honey', 'Honey', 7]];
+  // Grams in one kitchen spoon: sugar weighed at home (7 g); gur and honey scaled to the same spoon.
+  const TYPES = [['sugar', 'Sugar', 7], ['gur', 'Gur', 8], ['honey', 'Honey', 12]];
   let ty = 0;
-  sheet(`<div class="q" style="font-size:26px">Sugar in ${mealName}</div><p class="mute" style="margin-top:-4px">In tea, coffee, dahi, a shake, anything sweetened at home.</p>
+  sheet(`<div class="q" style="font-size:26px">Sugar in ${mealName}</div><p class="mute" style="margin-top:-4px">Your kitchen spoon: 1 spoon of sugar = 7 g.</p>
     <div class="cats" id="sTy">${TYPES.map((t, i) => `<button data-t="${i}" class="${i ? '' : 'sel'}">${t[1]}</button>`).join('')}</div>
-    <div class="tpl" id="sAmt" style="margin-top:14px">${[0.5, 1, 2, 3].map(n => `<button data-n="${n}" style="min-width:64px">${n === 0.5 ? '½' : n} tsp</button>`).join('')}</div>
+    <div class="tpl" id="sAmt" style="margin-top:14px">${[0.5, 1, 2, 3].map(n => `<button data-n="${n}" style="min-width:72px">${n === 0.5 ? '½' : n} ${n > 1 ? 'spoons' : 'spoon'}</button>`).join('')}</div>
     <button class="btn dim full" id="shClose" style="margin-top:16px">Cancel</button>`, () => {
     $('#sTy').onclick = e => { const b = e.target.closest('[data-t]'); if (!b) return; ty = +b.dataset.t; $$('#sTy button').forEach(x => x.classList.toggle('sel', x === b)); };
     $('#sAmt').onclick = e => { const b = e.target.closest('[data-n]'); if (!b) return; const [id, name, g] = TYPES[ty], n = +b.dataset.n; addItems(meal, [[id, n * g]]); closeSheet(); toast(`${b.textContent} ${name.toLowerCase()} added to ${mealName}.`); };
