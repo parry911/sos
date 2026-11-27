@@ -1048,7 +1048,7 @@ function checkMilestones() {
 /* ---------- food logger (everything in grams) ---------- */
 const F = window.SOS_FOODS;
 let FOOD = {};
-function buildFood() { FOOD = Object.fromEntries(F.FOODS.concat(S.myFoods || []).map(f => [f.id, f])); }
+function buildFood() { const ed = S.foodEdits || {}; FOOD = Object.fromEntries(F.FOODS.map(f => [f.id, ed[f.id] ? Object.assign({}, f, ed[f.id], {edited: true}) : f]).concat((S.myFoods || []).map(f => [f.id, f]))); }
 if (!S.myFoods) S.myFoods = [];
 buildFood();
 // One-time move from "servings" to grams, so nothing logged before is lost.
@@ -1136,8 +1136,8 @@ function renderFood() {
       else empty = `<div class="tpl"><button data-copy="${id}">Same as yesterday</button></div>`;
     }
     return `<div class="meal"><div class="mh"><div><b>${name}</b> <span>${items.length ? Math.round(kc) + ' kcal' : ''}</span></div><button class="addb" data-add="${id}">+ Add</button></div>
-      ${items.map(({it, i}) => { const f = FOOD[it.id]; return `<div class="fi"><button class="nm" data-edit="${i}"><b>${esc(f.name)}${f.pk ? '<span class="pk">Packaged</span>' : ''}</b><span>${esc(amountLabel(f, it.g))}</span></button><div class="kc">${Math.round(nut(f, it.g, 'kcal'))} kcal<small>${fmt1(nut(f, it.g, 'p'))} g protein</small></div><button class="rm" data-rm="${i}" aria-label="Remove ${esc(f.name)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>`; }).join('')}
-      ${empty}</div>`;
+      ${items.map(({it, i}) => { const f = FOOD[it.id]; return `<div class="fi"><button class="nm" data-edit="${i}"><b>${esc(f.name)}${f.pk ? '<span class="pk">Packaged</span>' : ''}${noSugar(f) ? '<span class="nosug">sugar not set</span>' : ''}</b><span>${esc(amountLabel(f, it.g))}</span></button><div class="kc">${Math.round(nut(f, it.g, 'kcal'))} kcal<small>${fmt1(nut(f, it.g, 'p'))} g protein</small></div><button class="rm" data-rm="${i}" aria-label="Remove ${esc(f.name)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>`; }).join('')}
+      ${empty}${items.length ? `<div class="tpl"><button data-sugar="${id}">+ Sugar</button></div>` : ''}</div>`;
   }).join('');
   $('#micros').innerHTML = F.MICROS.map(m => { const ref = microRef(m, T), v = t[m.k] || 0, p = v / ref, bad = m.limit && v > ref; return `<div class="mi"><span>${m.name}${m.t ? '<i class="tplus">T</i>' : ''}${m.note ? `<small>${esc(m.note)}</small>` : ''}</span>${bar(p, m.limit ? (bad ? '#ff6b57' : '#ffd166') : '#7ef0b5')}<b style="color:${bad ? 'var(--coral)' : 'inherit'}">${(v < 10 && m.unit !== 'g' ? fmt1(v) : Math.round(v).toLocaleString('en-IN'))} / ${ref.toLocaleString('en-IN')} ${m.unit}</b></div>`; }).join('');
   renderWeight(); renderTargets();
@@ -1156,6 +1156,7 @@ $('#meals').addEventListener('click', e => {
   else if (b.dataset.copy) { const n = new Date(); const y = dkey(new Date(n.getFullYear(), n.getMonth(), n.getDate() - fDay - 1)); const src = (S.food[y] || []).filter(x => x.meal === b.dataset.copy && FOOD[x.id]); if (!src.length) { toast('Nothing logged for that meal the day before.'); return; } addItems(b.dataset.copy, src.map(x => [x.id, x.g])); }
   else if (b.dataset.rm) { S.food[k].splice(+b.dataset.rm, 1); save(); queueSync(k); renderFood(); renderFoodCard(); }
   else if (b.dataset.edit) editSheet(+b.dataset.edit);
+  else if (b.dataset.sugar) sugarSheet(b.dataset.sugar);
 });
 $('#dPrev').onclick = () => { fDay++; renderFood(); };
 $('#dNext').onclick = () => { if (fDay > 0) fDay--; renderFood(); };
@@ -1289,9 +1290,55 @@ function customSheet(meal) {
 }
 function editSheet(i) {
   const k = fKey(), it = S.food[k][i], f = FOOD[it.id];
-  sheet(`<div class="q" style="font-size:26px">Change amount</div>${amtPanel(f, it.g, 'Save', `<button class="btn dim full" id="eDel" style="margin-top:8px">Remove from ${F.MEALS.find(m => m[0] === it.meal)[1].toLowerCase()}</button>`)}<button class="btn dim full" id="shClose">Cancel</button>`, l => {
+  sheet(`<div class="q" style="font-size:26px">Change amount</div>${amtPanel(f, it.g, 'Save', `<button class="btn dim full" id="eNut" style="margin-top:8px">Edit nutrition${noSugar(f) ? ' · sugar not set' : ''}</button><button class="btn dim full" id="eDel" style="margin-top:8px">Remove from ${F.MEALS.find(m => m[0] === it.meal)[1].toLowerCase()}</button>`)}<button class="btn dim full" id="shClose">Cancel</button>`, l => {
+    $('#eNut').onclick = () => nutriSheet(f.id, () => editSheet(i));
     bindAmtPanel(l, f, it.g, g => { it.g = Math.round(g); S.lastG[f.id] = it.g; save(); queueSync(k); closeSheet(); renderFood(); renderFoodCard(); });
     $('#eDel').onclick = () => { S.food[k].splice(i, 1); save(); queueSync(k); closeSheet(); renderFood(); renderFoodCard(); };
+    $('#shClose').onclick = closeSheet;
+  });
+}
+
+// Foods you added before the sugar counter have no sugar numbers yet.
+const noSugar = f => !!f.mine && f.sug === undefined;
+// Edit the numbers for any food: your own foods change in place; the app's foods get your override.
+function nutriSheet(id, back) {
+  const f = FOOD[id], u = f.units[0], base = F.FOODS.find(x => x.id === id);
+  const FLD = [['kcal', 'Calories, kcal'], ['p', 'Protein, g'], ['c', 'Carbs, g'], ['f', 'Fat, g'], ['fib', 'Fibre, g'], ['na', 'Sodium, mg'], ['sug', 'Total sugars, g'], ['asug', 'Added sugars, g']];
+  let per = u[1] === 100 ? 100 : u[1];
+  const val = (k, g) => f[k] === undefined ? '' : String(Math.round(f[k] * g / 100 * 10) / 10);
+  sheet(`<div class="q" style="font-size:26px">Edit nutrition</div><p class="mute" style="margin-top:-4px">${esc(f.name)}. Changes apply to every day you’ve logged it, past and future.${f.mine ? '' : ' Reset brings back the app’s numbers.'}</p>
+    <div class="frm" style="grid-template-columns:1fr"><label>The numbers are for<select id="nBasis"><option value="${u[1]}">1 ${esc(u[0])} (${u[1]} g)</option>${u[1] === 100 ? '' : '<option value="100">100 g</option>'}</select></label></div>
+    <div class="frm">${FLD.map(([k, lab]) => `<label>${lab}<input data-k="${k}" type="number" inputmode="decimal" min="0" value="${val(k, per)}"></label>`).join('')}</div>
+    <p class="mute tiny">Added sugar means sugar, gur, honey or syrup put into the food. Sugar that’s naturally in fruit or milk goes only in total sugars.</p>
+    <div class="two" style="margin-top:16px"><button class="btn dim" id="nBack">Back</button><button class="btn mint" id="nSave">Save</button></div>
+    ${f.edited ? '<button class="btn dim full" id="nReset" style="margin-top:8px">Reset to the app’s numbers</button>' : ''}`, l => {
+    $('#nBasis').onchange = () => { const g = +$('#nBasis').value; l.querySelectorAll('[data-k]').forEach(inp => { const v = parseFloat(inp.value); if (v >= 0) inp.value = String(Math.round(v * g / per * 10) / 10); }); per = g; };
+    $('#nBack').onclick = back;
+    $('#nSave').onclick = () => {
+      const o = {};
+      l.querySelectorAll('[data-k]').forEach(inp => { const v = parseFloat(inp.value); if (v >= 0) o[inp.dataset.k] = v * 100 / per; });
+      if (!(o.kcal > 0)) { toast('Add the calories.'); return; }
+      if (o.asug > (o.sug || 0)) o.sug = o.asug;
+      if (o.sug !== undefined && o.asug === undefined) o.asug = 0;
+      if (f.mine) { const m = S.myFoods.find(x => x.id === id); Object.assign(m, o); }
+      else { S.foodEdits = S.foodEdits || {}; const d = {}; Object.keys(o).forEach(k => { if (Math.abs(o[k] - (base[k] || 0)) > 0.01) d[k] = o[k]; }); if (Object.keys(d).length) S.foodEdits[id] = d; else delete S.foodEdits[id]; }
+      save(); buildFood(); Object.keys(S.food).forEach(d => { if (S.food[d].some(x => x.id === id)) queueSync(d); });
+      renderFood(); renderFoodCard(); toast('Saved. Every day with ' + f.name + ' is updated.'); back();
+    };
+    const r = $('#nReset'); if (r) r.onclick = () => { delete S.foodEdits[id]; save(); buildFood(); renderFood(); renderFoodCard(); toast('Back to the app’s numbers.'); back(); };
+  });
+}
+// Quick sugar for a meal: tea, coffee, dahi, anything sweetened at home.
+function sugarSheet(meal) {
+  const mealName = F.MEALS.find(m => m[0] === meal)[1].toLowerCase();
+  const TYPES = [['sugar', 'Sugar', 4], ['gur', 'Gur', 5], ['honey', 'Honey', 7]];
+  let ty = 0;
+  sheet(`<div class="q" style="font-size:26px">Sugar in ${mealName}</div><p class="mute" style="margin-top:-4px">In tea, coffee, dahi, a shake, anything sweetened at home.</p>
+    <div class="cats" id="sTy">${TYPES.map((t, i) => `<button data-t="${i}" class="${i ? '' : 'sel'}">${t[1]}</button>`).join('')}</div>
+    <div class="tpl" id="sAmt" style="margin-top:14px">${[0.5, 1, 2, 3].map(n => `<button data-n="${n}" style="min-width:64px">${n === 0.5 ? '½' : n} tsp</button>`).join('')}</div>
+    <button class="btn dim full" id="shClose" style="margin-top:16px">Cancel</button>`, () => {
+    $('#sTy').onclick = e => { const b = e.target.closest('[data-t]'); if (!b) return; ty = +b.dataset.t; $$('#sTy button').forEach(x => x.classList.toggle('sel', x === b)); };
+    $('#sAmt').onclick = e => { const b = e.target.closest('[data-n]'); if (!b) return; const [id, name, g] = TYPES[ty], n = +b.dataset.n; addItems(meal, [[id, n * g]]); closeSheet(); toast(`${b.textContent} ${name.toLowerCase()} added to ${mealName}.`); };
     $('#shClose').onclick = closeSheet;
   });
 }

@@ -36,10 +36,15 @@ const I = {
 };
 const K = ['kcal','p','c','f','fib','na','k','ca','fe','vc','zn','sug','asug','mg','b12','vd','fol','va'];
 // recipe: [[ingredient, grams]...], cooked weight in grams (bones included where noted)
+// Home cooking usually uses more oil than a recipe says, so dishes cooked in oil or ghee
+// get a 15% calorie safety margin, all of it counted as fat (that's where the extra comes from).
+const BUFFER = 0.15;
 function dish(parts, yieldG) {
   const t = K.map(() => 0);
   parts.forEach(([n, g]) => { const r = I[n]; if (!r) throw n; r.forEach((v, i) => t[i] += v * g / 100); });
-  return t.map(v => v / yieldG * 100);
+  const out = t.map(v => v / yieldG * 100);
+  if (parts.some(([n]) => n === 'oil')) { const extra = out[0] * BUFFER; out[0] += extra; out[3] += extra / 9; out.buf = true; }
+  return out;
 }
 const R = {
   dal:        [dish([['toor',100],['oil',15],['onion',60],['tomato',60],['salt',5]], 500), '100 g toor dal, 1 tbsp oil or ghee tadka, onion, tomato, cooked to 500 g'],
@@ -102,7 +107,7 @@ const F = [
   ['chicken','Chicken curry, bone-in','Protein','chicken',[['bowl',250]],0,'main',''],
   ['drychicken','Dry chicken, boneless','Protein','drychicken',[['plate',150]],0,'main',''],
   ['drychickenb','Dry chicken, bone-in','Protein','drychickenb',[['plate',200]],0,'main',''],
-  ['burgrill','Grilled chicken & rice (Burgrill)','Protein',[137.5,9.5,15,4,0.75,275,125,12.5,0.6,1.25,1.0,1,0.5,20,0.2,0,10,10],[['regular bowl',400]],0,'main','restaurant estimate'],
+  ['burgrill','Grilled chicken & rice (Burgrill)','Protein',[158.1,9.5,15,6.3,0.75,275,125,12.5,0.6,1.25,1.0,1,0.5,20,0.2,0,10,10],[['regular bowl',400]],0,'main','restaurant estimate; +15% calories for extra oil'],
   ['fish','Fish tikka','Protein','fish',[['plate',150]],0,'main',''],
   ['fishgravy','Fish gravy','Protein','fishgravy',[['bowl',250]],0,'main',''],
   ['mutton','Mutton gravy','Protein','mutton',[['bowl',250]],0,'main',''],
@@ -138,7 +143,7 @@ const F = [
 const r2 = x => Math.round(x * 100) / 100;
 const FOODS = F.map(([id, name, cat, src, units, pk, kind, note]) => {
   const row = typeof src === 'string' ? R[src][0] : src;
-  const how = typeof src === 'string' ? R[src][1] : note;
+  const how = typeof src === 'string' ? R[src][1] + (R[src][0].buf ? '; +15% calories for extra oil' : '') : note;
   const o = {id, name, cat, units, pk: !!pk, kind, note: how};
   K.forEach((k, i) => o[k] = r2(row[i]));
   return o;
